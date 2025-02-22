@@ -1,22 +1,23 @@
 import type {
   Graffiti,
-  JSONSchema4,
+  JSONSchema,
   GraffitiLocation,
   GraffitiPutObject,
   GraffitiPatch,
 } from "@graffiti-garden/api";
 import { GraffitiErrorSchemaMismatch } from "@graffiti-garden/api";
-import type { GraffitiSessionOIDC } from "../types";
+import type { GraffitiSessionOIDC } from "./types";
 import {
   unpackLocationOrUri,
-  attemptAjvCompile,
+  compileGraffitiObjectSchema,
   randomBase64,
   locationToUri,
 } from "@graffiti-garden/implementation-local/utilities";
 import { parseGraffitiObjectResponse } from "./decode-response";
 import { encodeJSONBody, encodeQueryParams } from "./encode-request";
-import type Ajv from "ajv-draft-04";
+import type Ajv from "ajv";
 
+//@ts-ignore
 export class GraffitiSingleServerCrud
   implements Pick<Graffiti, "get" | "put" | "patch" | "delete">
 {
@@ -27,7 +28,7 @@ export class GraffitiSingleServerCrud
     this.ajv = ajv;
   }
 
-  async get<Schema extends JSONSchema4>(
+  async get<Schema extends JSONSchema>(
     locationOrUri: GraffitiLocation | string,
     schema: Schema,
     session?: GraffitiSessionOIDC,
@@ -36,7 +37,7 @@ export class GraffitiSingleServerCrud
     const getUrl = encodeQueryParams(uri, { schema });
     const response = await (session?.fetch ?? fetch)(getUrl);
     const object = await parseGraffitiObjectResponse(response, location, true);
-    const validate = attemptAjvCompile(this.ajv, schema);
+    const validate = compileGraffitiObjectSchema(this.ajv, schema);
     if (!validate(object)) {
       throw new GraffitiErrorSchemaMismatch(
         "The fetched object does not match the provided schema.",
@@ -45,7 +46,7 @@ export class GraffitiSingleServerCrud
     return object;
   }
 
-  async put<Schema extends JSONSchema4>(
+  async put<Schema extends JSONSchema>(
     object: GraffitiPutObject<Schema>,
     session: GraffitiSessionOIDC,
   ) {

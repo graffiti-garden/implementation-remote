@@ -1,6 +1,5 @@
 import { Graffiti } from "@graffiti-garden/api";
-import Ajv from "ajv-draft-04";
-import { GraffitiSynchronize } from "@graffiti-garden/implementation-local/synchronize";
+import Ajv from "ajv";
 import {
   GraffitiLocalDatabase,
   type GraffitiLocalOptions,
@@ -19,7 +18,7 @@ import {
 } from "./single-server";
 import { GraffitiRemoteAndLocal } from "./remote-and-local";
 
-export type * from "./types";
+export type { GraffitiSessionOIDC } from "./single-server/types";
 
 export class GraffitiFederated extends Graffiti {
   locationToUri = locationToUri;
@@ -32,9 +31,6 @@ export class GraffitiFederated extends Graffiti {
   discover: Graffiti["discover"];
   recoverOrphans: Graffiti["recoverOrphans"];
   channelStats: Graffiti["channelStats"];
-  synchronizeDiscover: Graffiti["synchronizeDiscover"];
-  synchronizeGet: Graffiti["synchronizeGet"];
-  synchronizeRecoverOrphans: Graffiti["synchronizeRecoverOrphans"];
   login: Graffiti["login"];
   logout: Graffiti["logout"];
   sessionEvents: Graffiti["sessionEvents"];
@@ -57,7 +53,10 @@ export class GraffitiFederated extends Graffiti {
     this.sessionEvents = sessionManager.sessionEvents;
 
     const ajv = new Ajv({ strict: false });
-    const graffitiLocal = new GraffitiLocalDatabase(options?.local, ajv);
+    const graffitiLocal = new GraffitiLocalDatabase({
+      ...options?.local,
+      ajv,
+    });
     const graffitiRemote = new GraffitiSingleServer(
       options?.remote ?? {
         source: "https://pod.graffiti.garden",
@@ -69,21 +68,12 @@ export class GraffitiFederated extends Graffiti {
       graffitiRemote,
     );
 
-    const graffitiSynchronized = new GraffitiSynchronize(
-      graffitiRemoteAndLocal,
-      ajv,
-    );
-
-    this.put = graffitiSynchronized.put;
-    this.get = graffitiSynchronized.get;
-    this.patch = graffitiSynchronized.patch;
-    this.delete = graffitiSynchronized.delete;
-    this.discover = graffitiSynchronized.discover;
-    this.recoverOrphans = graffitiSynchronized.recoverOrphans;
+    this.put = graffitiRemoteAndLocal.put;
+    this.get = graffitiRemoteAndLocal.get;
+    this.patch = graffitiRemoteAndLocal.patch;
+    this.delete = graffitiRemoteAndLocal.delete;
+    this.discover = graffitiRemoteAndLocal.discover;
+    this.recoverOrphans = graffitiRemoteAndLocal.recoverOrphans;
     this.channelStats = graffitiRemoteAndLocal.channelStats;
-    this.synchronizeDiscover = graffitiSynchronized.synchronizeDiscover;
-    this.synchronizeGet = graffitiSynchronized.synchronizeGet;
-    this.synchronizeRecoverOrphans =
-      graffitiSynchronized.synchronizeRecoverOrphans;
   }
 }

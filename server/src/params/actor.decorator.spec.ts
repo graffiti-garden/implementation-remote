@@ -2,7 +2,8 @@ import { ROUTE_ARGS_METADATA } from "@nestjs/common/constants";
 import { Actor } from "./actor.decorator";
 import { createServer } from "http";
 import { ExecutionContextHost } from "@nestjs/core/helpers/execution-context-host";
-import { solidLogin } from "../test/utils";
+import secrets from "../../../.secrets.json";
+import { solidNodeLogin } from "@graffiti-garden/implementation-remote-common";
 import { UnauthorizedException } from "@nestjs/common";
 import { describe, it, expect, beforeAll } from "vitest";
 
@@ -22,12 +23,12 @@ describe("Actor", () => {
   let authenticatedFetch: typeof fetch;
 
   beforeAll(async () => {
-    const login = await solidLogin();
+    const login = await solidNodeLogin(secrets);
     authenticatedFetch = login.fetch;
-    if (!login.webId) {
+    if (!login.actor) {
       throw "No webId in login object";
     }
-    actor = login.webId;
+    actor = login.actor;
   });
 
   it("plain fetch", async () => {

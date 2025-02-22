@@ -5,7 +5,8 @@ import {
 } from "@nestjs/platform-fastify";
 import { describe, it, expect, beforeAll, beforeEach, afterEach } from "vitest";
 import { randomBase64 as randomString } from "@graffiti-garden/implementation-local/utilities";
-import { solidLogin } from "../test/utils";
+import secrets from "../../../.secrets.json";
+import { solidNodeLogin } from "@graffiti-garden/implementation-remote-common";
 import { StoreModule } from "./store.module";
 import { encodeURIArray } from "../params/params.utils";
 import type { GraffitiPatch } from "@graffiti-garden/api";
@@ -54,12 +55,12 @@ describe("StoreController", () => {
 
   beforeAll(async () => {
     // Login to solid
-    const session = await solidLogin();
+    const session = await solidNodeLogin(secrets);
     solidFetch = session.fetch;
-    if (!session.webId) {
+    if (!session.actor) {
       throw new Error("No webId");
     }
-    webId = session.webId;
+    webId = session.actor;
   }, 100000);
 
   beforeEach(async () => {

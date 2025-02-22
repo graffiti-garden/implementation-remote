@@ -1,7 +1,7 @@
 {
   "name": "@graffiti-garden/implementation-federated",
-  "version": "0.0.2",
-  "description": "Federated implementation of the Graffiti API",
+  "version": "0.0.3",
+  "description": "A federated implementation of the Graffiti API",
   "types": "./dist/src/index.d.ts",
   "module": "./dist/esm/index.js",
   "browser": "./dist/browser/index.js",
@@ -18,6 +18,12 @@
       }
     }
   },
+  "files": [
+    "dist",
+    "src",
+    "package.json",
+    "README.md"
+  ],
   "scripts": {
     "test": "vitest run --no-file-parallelism",
     "test:watch": "vitest --no-file-parallelism",
@@ -25,24 +31,30 @@
     "build:types": "tsc --declaration --emitDeclarationOnly",
     "build:js": "tsx esbuild.config.mts",
     "build": "rm -rf dist && npm run build:types && npm run build:js",
-    "prepublishOnly": "npm update && npm test && npm run build"
+    "prepublishOnly": "npm update && npm test && npm run build",
+    "preinstall": "cd ../common && npm install && npm run build"
   },
   "author": "Theia Henderson",
   "license": "GPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/graffiti-garden/implementation-federated.git"
+  },
+  "bugs": {
+    "url": "https://github.com/graffiti-garden/implementation-federated/issues"
+  },
   "devDependencies": {
-    "@inrupt/solid-client-authn-node": "^2.3.0",
-    "esbuild": "^0.24.2",
+    "esbuild": "^0.25.0",
     "esbuild-plugin-polyfill-node": "^0.3.0",
-    "tslib": "^2.8.1",
-    "tsx": "^4.19.2",
+    "@graffiti-garden/implementation-remote-common": "file:../common",
+    "tsx": "^4.19.3",
     "typescript": "^5.7.3",
-    "vitest": "^1.6.0"
+    "vitest": "^3.0.6"
   },
   "dependencies": {
-    "@graffiti-garden/api": "^0.2.10",
-    "@graffiti-garden/implementation-local": "^0.2.10",
+    "@graffiti-garden/api": "^0.4.3",
+    "@graffiti-garden/implementation-local": "^0.4.1",
     "@graffiti-garden/solid-oidc-session-manager": "^0.1.1",
-    "ajv": "^8.17.1",
-    "ajv-draft-04": "^1.0.0"
+    "ajv": "^8.17.1"
   }
 }

@@ -1,4 +1,4 @@
-import type { GraffitiSession, GraffitiStream } from "@graffiti-garden/api";
+import type { GraffitiSession } from "@graffiti-garden/api";
 import type { GraffitiLocation } from "@graffiti-garden/api";
 import type { Graffiti } from "@graffiti-garden/api";
 import { unpackLocationOrUri } from "@graffiti-garden/implementation-local/utilities";
@@ -33,22 +33,22 @@ export class GraffitiRemoteAndLocal implements GraffitiBase {
   get: Graffiti["get"] = async (...args) => {
     const [locationOrUri, schema, session] = args;
     if (this.isRemoteLocation(locationOrUri)) {
-      return this.remoteGraffiti.get(
+      return this.remoteGraffiti.get<typeof schema>(
         locationOrUri,
         schema,
         this.isRemoteSession(session) ? session : undefined,
       );
     } else {
-      return this.localGraffiti.get(...args);
+      return this.localGraffiti.get<typeof schema>(...args);
     }
   };
 
   put: Graffiti["put"] = (...args) => {
     const [_, session] = args;
     if (this.isRemoteSession(session)) {
-      return this.remoteGraffiti.put(...args);
+      return this.remoteGraffiti.put<{}>(...args);
     } else {
-      return this.localGraffiti.put(...args);
+      return this.localGraffiti.put<{}>(...args);
     }
   };
 
@@ -101,9 +101,9 @@ export class GraffitiRemoteAndLocal implements GraffitiBase {
 
   recoverOrphans: Graffiti["recoverOrphans"] = (...args) => {
     if (this.isRemoteSession(args[1])) {
-      return this.remoteGraffiti.recoverOrphans(...args);
+      return this.remoteGraffiti.recoverOrphans<(typeof args)[0]>(...args);
     } else {
-      return this.localGraffiti.recoverOrphans(...args);
+      return this.localGraffiti.recoverOrphans<(typeof args)[0]>(...args);
     }
   };
 

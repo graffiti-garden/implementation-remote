@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   type PipeTransform,
   Query,
   UnprocessableEntityException,

@@ -1,0 +1,27 @@
+{
+  "name": "@graffiti-garden/implementation-remote-common",
+  "version": "1.0.0",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc"
+  },
+  "dependencies": {
+    "@graffiti-garden/api": "^0.4.3",
+    "@inrupt/solid-client-authn-node": "^2.3.0"
+  },
+  "devDependencies": {
+    "@types/events": "^3.0.3",
+    "typescript": "^5.7.3"
+  }
+}

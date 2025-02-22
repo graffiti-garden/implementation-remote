@@ -1,4 +1,4 @@
-import type { JSONSchema4 } from "@graffiti-garden/api";
+import type { JSONSchema } from "@graffiti-garden/api";
 
 function addHeader(requestInit: RequestInit, key: string, value: string): void {
   if (!requestInit.headers || !(requestInit.headers instanceof Headers)) {
@@ -16,7 +16,7 @@ export function encodeQueryParams(
   params: {
     channels?: string[];
     allowed?: string[] | null;
-    schema?: JSONSchema4;
+    schema?: JSONSchema;
   },
 ) {
   url += "?";

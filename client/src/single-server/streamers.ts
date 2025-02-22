@@ -1,19 +1,13 @@
 import { Graffiti, GraffitiErrorSchemaMismatch } from "@graffiti-garden/api";
-import type {
-  GraffitiObject,
-  GraffitiObjectBase,
-  GraffitiSession,
-  GraffitiStream,
-  JSONSchema4,
-} from "@graffiti-garden/api";
-import Ajv, { type ValidateFunction, type JSONSchemaType } from "ajv-draft-04";
+import type { GraffitiObjectBase, JSONSchema } from "@graffiti-garden/api";
+import Ajv, { type ValidateFunction, type JSONSchemaType } from "ajv";
 import {
-  attemptAjvCompile,
+  compileGraffitiObjectSchema,
   isActorAllowedGraffitiObject,
 } from "@graffiti-garden/implementation-local/utilities";
 import { parseJSONLinesResponse } from "./decode-response";
 import { encodeQueryParams } from "./encode-request";
-import type { GraffitiSessionOIDC } from "../types";
+import type { GraffitiSessionOIDC } from "./types";
 
 export const GRAFFITI_OBJECT_SCHEMA: JSONSchemaType<GraffitiObjectBase> = {
   type: "object",
@@ -52,9 +46,7 @@ export const GRAFFITI_CHANNEL_STATS_SCHEMA: JSONSchemaType<{
   required: ["channel", "count", "lastModified"],
 };
 
-export class GraffitiSingleServerStreamers
-  implements Pick<Graffiti, "discover" | "recoverOrphans" | "channelStats">
-{
+export class GraffitiSingleServerStreamers {
   ajv: Ajv;
   source: string;
   validateGraffitiObject: ValidateFunction<GraffitiObjectBase>;
@@ -71,13 +63,13 @@ export class GraffitiSingleServerStreamers
     this.validateChannelStats = this.ajv.compile(GRAFFITI_CHANNEL_STATS_SCHEMA);
   }
 
-  async *streamObjects<Schema extends JSONSchema4>(
+  async *streamObjects<Schema extends JSONSchema>(
     url: string,
     isDesired: (object: GraffitiObjectBase) => void,
     schema: Schema,
     session?: GraffitiSessionOIDC | null,
   ) {
-    const validate = attemptAjvCompile(this.ajv, schema);
+    const validate = compileGraffitiObjectSchema(this.ajv, schema);
     const response = await (session?.fetch ?? fetch)(url);
 
     const iterator = parseJSONLinesResponse(response, this.source, (object) => {
@@ -111,7 +103,7 @@ export class GraffitiSingleServerStreamers
     }
   }
 
-  discover<Schema extends JSONSchema4>(
+  discover<Schema extends JSONSchema>(
     channels: string[],
     schema: Schema,
     session?: GraffitiSessionOIDC | null,
@@ -127,10 +119,10 @@ export class GraffitiSingleServerStreamers
         );
       }
     };
-    return this.streamObjects(url, isDesired, schema, session);
+    return this.streamObjects<Schema>(url, isDesired, schema, session);
   }
 
-  recoverOrphans<Schema extends JSONSchema4>(
+  recoverOrphans<Schema extends JSONSchema>(
     schema: Schema,
     session: GraffitiSessionOIDC,
   ): ReturnType<typeof Graffiti.prototype.discover<Schema>> {
@@ -145,7 +137,7 @@ export class GraffitiSingleServerStreamers
         throw new Error("Source returned an object with channels");
       }
     };
-    return this.streamObjects(url, isDesired, schema, session);
+    return this.streamObjects<Schema>(url, isDesired, schema, session);
   }
 
   channelStats(

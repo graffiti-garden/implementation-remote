@@ -1,17 +1,22 @@
+import { Graffiti } from "@graffiti-garden/api";
 import { graffitiCRUDTests } from "@graffiti-garden/api/tests";
 import { GraffitiSingleServerCrud } from "./crud";
-import * as secrets1 from "../../../.secrets1.json";
-import * as secrets2 from "../../../.secrets2.json";
-import Ajv from "ajv-draft-04";
-import { solidLogin } from "../test-utils";
+import secrets from "../../../.secrets.json";
+import Ajv from "ajv";
+import { solidNodeLogin } from "@graffiti-garden/implementation-remote-common";
 
 const ajv = new Ajv({ strict: false });
 
-const session1 = solidLogin(secrets1);
-const session2 = solidLogin(secrets2);
+const session1 = solidNodeLogin(secrets);
+const session2 = solidNodeLogin(secrets, 1);
+
+const useGraffiti: () => Pick<
+  Graffiti,
+  "get" | "put" | "patch" | "delete"
+> = () => new GraffitiSingleServerCrud("http://localhost:3000", ajv);
 
 graffitiCRUDTests(
-  () => new GraffitiSingleServerCrud("http://localhost:3000", ajv),
+  useGraffiti,
   () => session1,
   () => session2,
 );

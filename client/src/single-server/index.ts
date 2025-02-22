@@ -1,4 +1,4 @@
-import type Ajv from "ajv-draft-04";
+import type Ajv from "ajv";
 import type { Graffiti } from "@graffiti-garden/api";
 import { GraffitiSingleServerCrud } from "./crud";
 import { GraffitiSingleServerStreamers } from "./streamers";

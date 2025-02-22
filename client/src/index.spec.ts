@@ -3,20 +3,19 @@ import {
   graffitiDiscoverTests,
   graffitiCRUDTests,
   graffitiLocationTests,
-  graffitiSynchronizeTests,
   graffitiOrphanTests,
+  graffitiChannelStatsTests,
 } from "@graffiti-garden/api/tests";
 import { GraffitiFederated } from "./index";
-import * as secrets1 from "../../.secrets1.json";
-import * as secrets2 from "../../.secrets2.json";
-import { solidLogin } from "./test-utils";
+import secrets from "../../.secrets.json";
+import { solidNodeLogin } from "@graffiti-garden/implementation-remote-common";
 import { randomBase64 } from "@graffiti-garden/implementation-local/utilities";
 
 const source = "http://localhost:3000";
 const options = { remote: { source } };
 
-const session1 = solidLogin(secrets1);
-const session2 = solidLogin(secrets2);
+const session1 = solidNodeLogin(secrets);
+const session2 = solidNodeLogin(secrets, 1);
 
 describe("Remote sessions", () => {
   graffitiDiscoverTests(
@@ -30,12 +29,12 @@ describe("Remote sessions", () => {
     () => session2,
   );
   graffitiLocationTests(() => new GraffitiFederated(options));
-  graffitiSynchronizeTests(
+  graffitiOrphanTests(
     () => new GraffitiFederated(options),
     () => session1,
     () => session2,
   );
-  graffitiOrphanTests(
+  graffitiChannelStatsTests(
     () => new GraffitiFederated(options),
     () => session1,
     () => session2,
@@ -54,14 +53,14 @@ describe("Local sessions", () => {
     () => ({ actor: "local" + randomBase64() }),
     () => ({ actor: "local" + randomBase64() }),
   );
-  graffitiSynchronizeTests(
-    () => new GraffitiFederated(options),
-    () => ({ actor: "local" + randomBase64() }),
-    () => ({ actor: "local" + randomBase64() }),
-  );
   graffitiOrphanTests(
     () => new GraffitiFederated(options),
     () => ({ actor: "local" + randomBase64() }),
     () => ({ actor: "local" + randomBase64() }),
+  );
+  graffitiChannelStatsTests(
+    () => new GraffitiFederated(options),
+    () => session1,
+    () => session2,
   );
 });
