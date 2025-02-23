@@ -1,6 +1,7 @@
 import { Graffiti, GraffitiErrorSchemaMismatch } from "@graffiti-garden/api";
 import type { GraffitiObjectBase, JSONSchema } from "@graffiti-garden/api";
-import Ajv, { type ValidateFunction, type JSONSchemaType } from "ajv";
+import type Ajv from "ajv";
+import type { JSONSchemaType, ValidateFunction } from "ajv";
 import {
   compileGraffitiObjectSchema,
   isActorAllowedGraffitiObject,
@@ -47,20 +48,41 @@ export const GRAFFITI_CHANNEL_STATS_SCHEMA: JSONSchemaType<{
 };
 
 export class GraffitiSingleServerStreamers {
-  ajv: Ajv;
   source: string;
-  validateGraffitiObject: ValidateFunction<GraffitiObjectBase>;
-  validateChannelStats: ValidateFunction<{
-    channel: string;
-    count: number;
-    lastModified: number;
-  }>;
+  validateGraffitiObject_:
+    | Promise<ValidateFunction<GraffitiObjectBase>>
+    | undefined;
+  validateChannelStats_:
+    | Promise<
+        ValidateFunction<{
+          channel: string;
+          count: number;
+          lastModified: number;
+        }>
+      >
+    | undefined;
+  useAjv: () => Promise<Ajv>;
 
-  constructor(source: string, ajv: Ajv) {
+  get validateGraffitiObject() {
+    if (!this.validateGraffitiObject_) {
+      this.validateGraffitiObject_ = this.useAjv().then((ajv) =>
+        ajv.compile(GRAFFITI_OBJECT_SCHEMA),
+      );
+    }
+    return this.validateGraffitiObject_;
+  }
+  get validateChannelStats() {
+    if (!this.validateChannelStats_) {
+      this.validateChannelStats_ = this.useAjv().then((ajv) =>
+        ajv.compile(GRAFFITI_CHANNEL_STATS_SCHEMA),
+      );
+    }
+    return this.validateChannelStats_;
+  }
+
+  constructor(source: string, useAjv: () => Promise<Ajv>) {
     this.source = source;
-    this.ajv = ajv;
-    this.validateGraffitiObject = this.ajv.compile(GRAFFITI_OBJECT_SCHEMA);
-    this.validateChannelStats = this.ajv.compile(GRAFFITI_CHANNEL_STATS_SCHEMA);
+    this.useAjv = useAjv;
   }
 
   async *streamObjects<Schema extends JSONSchema>(
@@ -69,29 +91,33 @@ export class GraffitiSingleServerStreamers {
     schema: Schema,
     session?: GraffitiSessionOIDC | null,
   ) {
-    const validate = compileGraffitiObjectSchema(this.ajv, schema);
+    const validate = compileGraffitiObjectSchema(await this.useAjv(), schema);
     const response = await (session?.fetch ?? fetch)(url);
 
-    const iterator = parseJSONLinesResponse(response, this.source, (object) => {
-      if (!this.validateGraffitiObject(object)) {
-        throw new Error("Source returned a non-Graffiti object");
-      }
-      if (object.source !== this.source) {
-        throw new Error(
-          "Source returned an object claiming to be from another source",
-        );
-      }
-      if (!isActorAllowedGraffitiObject(object, session)) {
-        throw new Error(
-          "Source returned an object that the session is not allowed to see",
-        );
-      }
-      isDesired(object);
-      if (!validate(object)) {
-        throw new GraffitiErrorSchemaMismatch();
-      }
-      return object;
-    });
+    const iterator = parseJSONLinesResponse(
+      response,
+      this.source,
+      async (object) => {
+        if (!(await this.validateGraffitiObject)(object)) {
+          throw new Error("Source returned a non-Graffiti object");
+        }
+        if (object.source !== this.source) {
+          throw new Error(
+            "Source returned an object claiming to be from another source",
+          );
+        }
+        if (!isActorAllowedGraffitiObject(object, session)) {
+          throw new Error(
+            "Source returned an object that the session is not allowed to see",
+          );
+        }
+        isDesired(object);
+        if (!validate(object)) {
+          throw new GraffitiErrorSchemaMismatch();
+        }
+        return object;
+      },
+    );
 
     try {
       for await (const object of iterator) {
@@ -146,8 +172,8 @@ export class GraffitiSingleServerStreamers {
     return parseJSONLinesResponse(
       session.fetch(`${this.source}/channel-stats`),
       this.source,
-      (object) => {
-        if (!this.validateChannelStats(object)) {
+      async (object) => {
+        if (!(await this.validateChannelStats)(object)) {
           throw new Error("Source returned a non-channel-stats object");
         }
         return object;

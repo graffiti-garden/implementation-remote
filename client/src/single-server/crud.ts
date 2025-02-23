@@ -21,11 +21,11 @@ import type Ajv from "ajv";
 export class GraffitiSingleServerCrud
   implements Pick<Graffiti, "get" | "put" | "patch" | "delete">
 {
-  ajv: Ajv;
+  useAjv: () => Promise<Ajv>;
   source: string;
-  constructor(source: string, ajv: Ajv) {
+  constructor(source: string, useAjv: () => Promise<Ajv>) {
     this.source = source;
-    this.ajv = ajv;
+    this.useAjv = useAjv;
   }
 
   async get<Schema extends JSONSchema>(
@@ -37,7 +37,7 @@ export class GraffitiSingleServerCrud
     const getUrl = encodeQueryParams(uri, { schema });
     const response = await (session?.fetch ?? fetch)(getUrl);
     const object = await parseGraffitiObjectResponse(response, location, true);
-    const validate = compileGraffitiObjectSchema(this.ajv, schema);
+    const validate = compileGraffitiObjectSchema(await this.useAjv(), schema);
     if (!validate(object)) {
       throw new GraffitiErrorSchemaMismatch(
         "The fetched object does not match the provided schema.",

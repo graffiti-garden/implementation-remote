@@ -1,4 +1,8 @@
-import type { GraffitiStream } from "@graffiti-garden/api";
+import type {
+  GraffitiStream,
+  GraffitiLocation,
+  GraffitiObjectBase,
+} from "@graffiti-garden/api";
 import {
   GraffitiErrorForbidden,
   GraffitiErrorInvalidSchema,
@@ -8,11 +12,6 @@ import {
   GraffitiErrorSchemaMismatch,
   GraffitiErrorUnauthorized,
 } from "@graffiti-garden/api";
-import type {
-  GraffitiLocation,
-  GraffitiObjectBase,
-} from "@graffiti-garden/api";
-import { strConcat } from "ajv/dist/compile/codegen";
 
 export async function catchResponseErrors(response: Response) {
   if (response.ok) return;

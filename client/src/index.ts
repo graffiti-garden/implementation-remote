@@ -1,5 +1,4 @@
 import { Graffiti } from "@graffiti-garden/api";
-import Ajv from "ajv";
 import {
   GraffitiLocalDatabase,
   type GraffitiLocalOptions,
@@ -52,16 +51,11 @@ export class GraffitiFederated extends Graffiti {
     this.logout = sessionManager.logout.bind(sessionManager);
     this.sessionEvents = sessionManager.sessionEvents;
 
-    const ajv = new Ajv({ strict: false });
-    const graffitiLocal = new GraffitiLocalDatabase({
-      ...options?.local,
-      ajv,
-    });
+    const graffitiLocal = new GraffitiLocalDatabase(options?.local);
     const graffitiRemote = new GraffitiSingleServer(
       options?.remote ?? {
         source: "https://pod.graffiti.garden",
       },
-      ajv,
     );
     const graffitiRemoteAndLocal = new GraffitiRemoteAndLocal(
       graffitiLocal,

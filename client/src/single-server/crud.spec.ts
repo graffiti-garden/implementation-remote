@@ -13,7 +13,8 @@ const session2 = solidNodeLogin(secrets, 1);
 const useGraffiti: () => Pick<
   Graffiti,
   "get" | "put" | "patch" | "delete"
-> = () => new GraffitiSingleServerCrud("http://localhost:3000", ajv);
+> = () =>
+  new GraffitiSingleServerCrud("http://localhost:3000", async () => ajv);
 
 graffitiCRUDTests(
   useGraffiti,

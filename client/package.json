@@ -16,6 +16,16 @@
         "types": "./dist/src/index.d.ts",
         "default": "./dist/cjs/index.js"
       }
+    },
+    "./database": {
+      "import": {
+        "types": "./dist/src/database/index.d.ts",
+        "default": "./dist/esm/database/index.js"
+      },
+      "require": {
+        "types": "./dist/src/database/index.d.ts",
+        "default": "./dist/cjs/database/index.js"
+      }
     }
   },
   "files": [
@@ -53,7 +63,7 @@
   },
   "dependencies": {
     "@graffiti-garden/api": "^0.4.3",
-    "@graffiti-garden/implementation-local": "^0.4.1",
+    "@graffiti-garden/implementation-local": "^0.4.3",
     "@graffiti-garden/solid-oidc-session-manager": "^0.1.4",
     "ajv": "^8.17.1"
   }

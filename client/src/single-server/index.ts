@@ -5,6 +5,7 @@ import { GraffitiSingleServerStreamers } from "./streamers";
 
 export interface GraffitiSingleServerOptions {
   source: string;
+  ajv?: Ajv;
 }
 
 export class GraffitiSingleServer
@@ -22,6 +23,8 @@ export class GraffitiSingleServer
 {
   protected readonly crud: GraffitiSingleServerCrud;
   protected readonly streamers: GraffitiSingleServerStreamers;
+  protected readonly options: GraffitiSingleServerOptions;
+  protected ajv_: Promise<Ajv> | undefined;
 
   put: Graffiti["put"];
   get: Graffiti["get"];
@@ -31,9 +34,25 @@ export class GraffitiSingleServer
   recoverOrphans: Graffiti["recoverOrphans"];
   channelStats: Graffiti["channelStats"];
 
-  constructor(options: GraffitiSingleServerOptions, ajv: Ajv) {
-    this.crud = new GraffitiSingleServerCrud(options.source, ajv);
-    this.streamers = new GraffitiSingleServerStreamers(options.source, ajv);
+  get ajv() {
+    if (!this.ajv_) {
+      this.ajv_ = this.options.ajv
+        ? Promise.resolve(this.options.ajv)
+        : (async () => {
+            const { default: Ajv } = await import("ajv");
+            return new Ajv({ strict: false });
+          })();
+    }
+    return this.ajv_;
+  }
+
+  constructor(options: GraffitiSingleServerOptions) {
+    this.options = options;
+    this.crud = new GraffitiSingleServerCrud(options.source, () => this.ajv);
+    this.streamers = new GraffitiSingleServerStreamers(
+      options.source,
+      () => this.ajv,
+    );
 
     this.put = this.crud.put.bind(this.crud);
     this.get = this.crud.get.bind(this.crud);
