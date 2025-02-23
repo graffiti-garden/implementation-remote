@@ -69,16 +69,25 @@ See `package.json` for more scripts.
 
 Some of the tests require a Solid login, so in the root of the repository,
 create a `.secrets.json` file containing a list of [static Solid login credentials](https://docs.inrupt.com/developer-tools/javascript/client-libraries/tutorial/authenticate-nodejs-script/#authenticate-with-statically-registered-client-credentials).
-You can register for free credentials at [Inrupt](https://login.inrupt.com/registration.html). For example:
 
 ```json
 [
   {
-    "client_id": "12345678-1234-1234-1234-123456789012",
-    "client_secret": "12345678-1234-1234-1234-123456789012",
+    "clientId": "12345..."
+    "clientSecret": "67890..."
     "oidcIssuer": "https://login.inrupt.com"
+    "refreshToken": "abcde... not provided by all providers"
   }
 ]
+```
+
+You can register for free credentials at [Inrupt](https://login.inrupt.com/registration.html).
+Alternatively, you can use [@inrupt/generate-oidc-token](https://github.com/inrupt/generate-oidc-token)
+however be warned that is has been deprecated and may not work in the future.
+
+```bash
+npx @inrupt/generate-oidc-token
+```
 
 Also, make sure the web server is not be running as it conflicts with tests, i.e. kill `npm start`.
 
