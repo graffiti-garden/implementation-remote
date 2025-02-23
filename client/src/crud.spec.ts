@@ -1,7 +1,7 @@
 import { Graffiti } from "@graffiti-garden/api";
 import { graffitiCRUDTests } from "@graffiti-garden/api/tests";
 import { GraffitiSingleServerCrud } from "./crud";
-import secrets from "../../../.secrets.json";
+import secrets from "../../.secrets.json";
 import Ajv from "ajv";
 import { solidNodeLogin } from "@graffiti-garden/implementation-remote-common";
 

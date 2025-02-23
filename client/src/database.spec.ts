@@ -4,8 +4,8 @@ import {
   graffitiOrphanTests,
   graffitiChannelStatsTests,
 } from "@graffiti-garden/api/tests";
-import { GraffitiSingleServer } from "./index";
-import secrets from "../../../.secrets.json";
+import { GraffitiSingleServer } from "./database";
+import secrets from "../../.secrets.json";
 import { solidNodeLogin } from "@graffiti-garden/implementation-remote-common";
 
 const source = "http://localhost:3000";

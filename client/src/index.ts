@@ -14,10 +14,10 @@ import {
 import {
   GraffitiSingleServer,
   type GraffitiSingleServerOptions,
-} from "./single-server";
+} from "./database";
 import { GraffitiRemoteAndLocal } from "./remote-and-local";
 
-export type { GraffitiSessionOIDC } from "./single-server/types";
+export type { GraffitiSessionOIDC } from "./types";
 
 export class GraffitiFederated extends Graffiti {
   locationToUri = locationToUri;
