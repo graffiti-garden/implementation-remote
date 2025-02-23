@@ -1,5 +1,5 @@
 {
-  "name": "@graffiti-garden/implementation-federated-server",
+  "name": "@graffiti-garden/implementation-remote-server",
   "version": "1.0.0",
   "main": "src/index.ts",
   "scripts": {

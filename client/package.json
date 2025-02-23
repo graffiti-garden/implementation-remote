@@ -26,6 +26,16 @@
         "types": "./dist/src/database/index.d.ts",
         "default": "./dist/cjs/database/index.js"
       }
+    },
+    "./remote-and-local": {
+      "import": {
+        "types": "./dist/src/remote-and-local/index.d.ts",
+        "default": "./dist/esm/remote-and-local/index.js"
+      },
+      "require": {
+        "types": "./dist/src/remote-and-local/index.d.ts",
+        "default": "./dist/cjs/remote-and-local/index.js"
+      }
     }
   },
   "files": [

@@ -18,7 +18,7 @@ import { encodeJSONBody, encodeQueryParams } from "./encode-request";
 import type Ajv from "ajv";
 
 //@ts-ignore
-export class GraffitiSingleServerCrud
+export class GraffitiRemoteCrud
   implements Pick<Graffiti, "get" | "put" | "patch" | "delete">
 {
   useAjv: () => Promise<Ajv>;

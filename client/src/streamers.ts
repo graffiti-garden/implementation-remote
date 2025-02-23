@@ -47,7 +47,7 @@ export const GRAFFITI_CHANNEL_STATS_SCHEMA: JSONSchemaType<{
   required: ["channel", "count", "lastModified"],
 };
 
-export class GraffitiSingleServerStreamers {
+export class GraffitiRemoteStreamers {
   source: string;
   validateGraffitiObject_:
     | Promise<ValidateFunction<GraffitiObjectBase>>

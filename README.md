@@ -1,8 +1,10 @@
 # Graffiti Federated Pods Implementation
 
-This is a federated implementation of the [Graffiti API](https://api.graffiti.garden/classes/Graffiti.html).
+This is a remote implementation of the [Graffiti API](https://api.graffiti.garden/classes/Graffiti.html).
 It contains both a Typescript [client](./client) that runs in the browser
 and a node.js "pod" [server](./server).
+
+While this implementation provides one client-server pair.
 
 As a federated implementation, it is designed for multiple pods
 to be deployed. Users can choose which pod(s) they want to host their data,

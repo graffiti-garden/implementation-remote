@@ -11,15 +11,13 @@ import {
   type GraffitiSolidOIDCSessionManagerOptions,
   GraffitiSolidOIDCSessionManager,
 } from "@graffiti-garden/solid-oidc-session-manager";
-import {
-  GraffitiSingleServer,
-  type GraffitiSingleServerOptions,
-} from "./database";
+import { GraffitiRemoteDatabase } from "./database";
 import { GraffitiRemoteAndLocal } from "./remote-and-local";
+import type { GraffitiRemoteOptions } from "./types";
 
-export type { GraffitiSessionOIDC } from "./types";
+export type * from "./types";
 
-export class GraffitiFederated extends Graffiti {
+export class GraffitiRemote extends Graffiti {
   locationToUri = locationToUri;
   uriToLocation = uriToLocation;
 
@@ -39,7 +37,7 @@ export class GraffitiFederated extends Graffiti {
    */
   constructor(options?: {
     local?: GraffitiLocalOptions;
-    remote?: GraffitiSingleServerOptions;
+    remote?: GraffitiRemoteOptions;
     session?: GraffitiSolidOIDCSessionManagerOptions;
   }) {
     super();
@@ -52,7 +50,7 @@ export class GraffitiFederated extends Graffiti {
     this.sessionEvents = sessionManager.sessionEvents;
 
     const graffitiLocal = new GraffitiLocalDatabase(options?.local);
-    const graffitiRemote = new GraffitiSingleServer(
+    const graffitiRemote = new GraffitiRemoteDatabase(
       options?.remote ?? {
         source: "https://pod.graffiti.garden",
       },

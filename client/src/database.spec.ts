@@ -4,7 +4,7 @@ import {
   graffitiOrphanTests,
   graffitiChannelStatsTests,
 } from "@graffiti-garden/api/tests";
-import { GraffitiSingleServer } from "./database";
+import { GraffitiRemoteDatabase } from "./database";
 import secrets from "../../.secrets.json";
 import { solidNodeLogin } from "@graffiti-garden/implementation-remote-common";
 
@@ -14,22 +14,22 @@ const session1 = solidNodeLogin(secrets);
 const session2 = solidNodeLogin(secrets, 1);
 
 graffitiDiscoverTests(
-  () => new GraffitiSingleServer({ source }),
+  () => new GraffitiRemoteDatabase({ source }),
   () => session1,
   () => session2,
 );
 graffitiCRUDTests(
-  () => new GraffitiSingleServer({ source }),
+  () => new GraffitiRemoteDatabase({ source }),
   () => session1,
   () => session2,
 );
 graffitiOrphanTests(
-  () => new GraffitiSingleServer({ source }),
+  () => new GraffitiRemoteDatabase({ source }),
   () => session1,
   () => session2,
 );
 graffitiChannelStatsTests(
-  () => new GraffitiSingleServer({ source }),
+  () => new GraffitiRemoteDatabase({ source }),
   () => session1,
   () => session2,
 );

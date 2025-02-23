@@ -1,14 +1,10 @@
 import type Ajv from "ajv";
 import type { Graffiti } from "@graffiti-garden/api";
-import { GraffitiSingleServerCrud } from "./crud";
-import { GraffitiSingleServerStreamers } from "./streamers";
+import { GraffitiRemoteCrud } from "./crud";
+import { GraffitiRemoteStreamers } from "./streamers";
+import type { GraffitiRemoteOptions } from "./types";
 
-export interface GraffitiSingleServerOptions {
-  source: string;
-  ajv?: Ajv;
-}
-
-export class GraffitiSingleServer
+export class GraffitiRemoteDatabase
   implements
     Pick<
       Graffiti,
@@ -21,9 +17,9 @@ export class GraffitiSingleServer
       | "channelStats"
     >
 {
-  protected readonly crud: GraffitiSingleServerCrud;
-  protected readonly streamers: GraffitiSingleServerStreamers;
-  protected readonly options: GraffitiSingleServerOptions;
+  protected readonly crud: GraffitiRemoteCrud;
+  protected readonly streamers: GraffitiRemoteStreamers;
+  protected readonly options: GraffitiRemoteOptions;
   protected ajv_: Promise<Ajv> | undefined;
 
   put: Graffiti["put"];
@@ -46,10 +42,10 @@ export class GraffitiSingleServer
     return this.ajv_;
   }
 
-  constructor(options: GraffitiSingleServerOptions) {
+  constructor(options: GraffitiRemoteOptions) {
     this.options = options;
-    this.crud = new GraffitiSingleServerCrud(options.source, () => this.ajv);
-    this.streamers = new GraffitiSingleServerStreamers(
+    this.crud = new GraffitiRemoteCrud(options.source, () => this.ajv);
+    this.streamers = new GraffitiRemoteStreamers(
       options.source,
       () => this.ajv,
     );
