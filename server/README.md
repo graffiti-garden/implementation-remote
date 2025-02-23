@@ -1,34 +1,47 @@
 # Graffiti Federated Implementation: Server
 
-This is a server for a federated implementation of the [Graffiti API](https://api.graffiti.garden/classes/Graffiti.html).
+This is a server for a remote implementation of the [Graffiti API](https://api.graffiti.garden/classes/Graffiti.html).
 The corresponding client is [adjacent in this repository](../client).
 
-This server uses the [PouchDB Implementation](https://github.com/graffiti-garden/implementation-pouchdb)
-of the Graffiti API under the hood,
-but wraps it with [Solid OIDC](https://solid.github.io/solid-oidc/) for portable authentication.
+This server uses a [local Implementation](https://github.com/graffiti-garden/implementation-local)
+of the Graffiti API under the hood, based on [PouchDB](https://pouchdb.com/),
+but wraps the local implementation is wrapped with [Solid OIDC](https://solid.github.io/solid-oidc/) for portable authentication.
 
 ## Development
 
-### Setup
+### Standalone Setup
 
 Since this server uses [PouchDB](https://pouchdb.com/), it can be run both with or without a separate database.
 For production, we will stand up a [CouchDB](https://couchdb.apache.org/) instance via docker,
 but for development and testing, we can use either an in-memory database or a dockerized CouchDB instance.
 
-To use the in-memory database, simply install the package locally by running the following in the root of the repository:
+To use the in-memory database, simply install the package locally by running the following in the
+`server` directory:
 
 ```bash
 npm install
 ```
 
+### Dockerized Setup
+
 To use the dockerized CouchDB instance, first install [Docker](https://docs.docker.com/engine/install/#server) and [Docker Compose](https://docs.docker.com/compose/install/).
-Then, run the following command in the root of the repository:
+Then create a `.env` file in the *root* of the repository (not the `server` directory)
+with the following contents:
+
+```bash
+COUCHDB_USER=admin
+COUCHDB_PASSWORD=password
+```
+
+For production, you should change the password to something more secure.
+
+Then, run the following command (again in the *root* of the repository):
 
 ```bash
 sudo docker compose up --build
 ```
 
-Then in another terminal launch a shell with:
+Then in another terminal launch a shell in the root of the repository:
 
 ```bash
 sudo docker compose exec graffiti-pod sh
@@ -42,7 +55,7 @@ docker compose down --remove-orphans
 
 ### Running
 
-Once setup, you can run the server.
+Once setup (with either method), you can run the server.
 
 ```bash
 npm start
@@ -54,14 +67,18 @@ See `package.json` for more scripts.
 
 ### Testing
 
-Some of the tests require a Solid login, so in the root of the repository, create a `.env` file defining [static Solid login credentials](https://docs.inrupt.com/developer-tools/javascript/client-libraries/tutorial/authenticate-nodejs-script/#authenticate-with-statically-registered-client-credentials).
+Some of the tests require a Solid login, so in the root of the repository,
+create a `.secrets.json` file containing a list of [static Solid login credentials](https://docs.inrupt.com/developer-tools/javascript/client-libraries/tutorial/authenticate-nodejs-script/#authenticate-with-statically-registered-client-credentials).
 You can register for free credentials at [Inrupt](https://login.inrupt.com/registration.html). For example:
 
-```bash
-SOLID_CLIENT_ID=12345678-1234-...
-SOLID_CLIENT_SECRET=12345678-1234-...
-SOLID_OIDC_ISSUER=https://login.inrupt.com
-```
+```json
+[
+  {
+    "client_id": "12345678-1234-1234-1234-123456789012",
+    "client_secret": "12345678-1234-1234-1234-123456789012",
+    "oidcIssuer": "https://login.inrupt.com"
+  }
+]
 
 Also, make sure the web server is not be running as it conflicts with tests, i.e. kill `npm start`.
 
