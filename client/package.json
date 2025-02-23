@@ -1,7 +1,7 @@
 {
-  "name": "@graffiti-garden/implementation-federated",
+  "name": "@graffiti-garden/implementation-remote",
   "version": "0.0.3",
-  "description": "A federated implementation of the Graffiti API",
+  "description": "A remote implementation of the Graffiti API",
   "types": "./dist/src/index.d.ts",
   "module": "./dist/esm/index.js",
   "browser": "./dist/browser/index.js",
@@ -44,9 +44,9 @@
     "url": "https://github.com/graffiti-garden/implementation-federated/issues"
   },
   "devDependencies": {
+    "@graffiti-garden/implementation-remote-common": "file:../common",
     "esbuild": "^0.25.0",
     "esbuild-plugin-polyfill-node": "^0.3.0",
-    "@graffiti-garden/implementation-remote-common": "file:../common",
     "tsx": "^4.19.3",
     "typescript": "^5.7.3",
     "vitest": "^3.0.6"
@@ -54,7 +54,7 @@
   "dependencies": {
     "@graffiti-garden/api": "^0.4.3",
     "@graffiti-garden/implementation-local": "^0.4.1",
-    "@graffiti-garden/solid-oidc-session-manager": "^0.1.3",
+    "@graffiti-garden/solid-oidc-session-manager": "^0.1.4",
     "ajv": "^8.17.1"
   }
 }

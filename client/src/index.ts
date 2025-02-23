@@ -8,8 +8,8 @@ import {
   locationToUri,
   uriToLocation,
 } from "@graffiti-garden/implementation-local/utilities";
-import type {
-  GraffitiSolidOIDCSessionManagerOptions,
+import {
+  type GraffitiSolidOIDCSessionManagerOptions,
   GraffitiSolidOIDCSessionManager,
 } from "@graffiti-garden/solid-oidc-session-manager";
 import {
@@ -31,10 +31,9 @@ export class GraffitiFederated extends Graffiti {
   discover: Graffiti["discover"];
   recoverOrphans: Graffiti["recoverOrphans"];
   channelStats: Graffiti["channelStats"];
-
+  login: Graffiti["login"];
+  logout: Graffiti["logout"];
   sessionEvents: Graffiti["sessionEvents"];
-  sessionManager: Promise<GraffitiSolidOIDCSessionManager> | undefined;
-  sessionManagerOptions: GraffitiSolidOIDCSessionManagerOptions | undefined;
 
   /**
    * Create a new Graffiti client that can interact with a federated set of pods.
@@ -46,14 +45,12 @@ export class GraffitiFederated extends Graffiti {
   }) {
     super();
 
-    this.sessionEvents =
-      this.sessionManagerOptions?.sessionEvents ?? new EventTarget();
-    this.sessionManagerOptions = options?.session;
-
-    // Restore the previous session by default
-    if (this.sessionManagerOptions?.restorePreviousSession ?? true) {
-      this.useSessionManager();
-    }
+    const sessionManager = new GraffitiSolidOIDCSessionManager(
+      options?.session,
+    );
+    this.login = sessionManager.login.bind(sessionManager);
+    this.logout = sessionManager.logout.bind(sessionManager);
+    this.sessionEvents = sessionManager.sessionEvents;
 
     const ajv = new Ajv({ strict: false });
     const graffitiLocal = new GraffitiLocalDatabase({
@@ -78,30 +75,5 @@ export class GraffitiFederated extends Graffiti {
     this.discover = graffitiRemoteAndLocal.discover;
     this.recoverOrphans = graffitiRemoteAndLocal.recoverOrphans;
     this.channelStats = graffitiRemoteAndLocal.channelStats;
-  }
-
-  protected useSessionManager() {
-    if (!this.sessionManager) {
-      this.sessionManager = (async () => {
-        const { GraffitiSolidOIDCSessionManager } = await import(
-          "@graffiti-garden/solid-oidc-session-manager"
-        );
-        return new GraffitiSolidOIDCSessionManager({
-          ...this.sessionManagerOptions,
-          sessionEvents: this.sessionEvents,
-        });
-      })();
-    }
-    return this.sessionManager;
-  }
-
-  async login(...args: Parameters<Graffiti["login"]>) {
-    const sessionManager = await this.useSessionManager();
-    return sessionManager.login(...args);
-  }
-
-  async logout(...args: Parameters<Graffiti["logout"]>) {
-    const sessionManager = await this.useSessionManager();
-    return sessionManager.logout(...args);
   }
 }
