@@ -1,6 +1,6 @@
 {
   "name": "@graffiti-garden/implementation-remote",
-  "version": "0.0.3",
+  "version": "0.1.0",
   "description": "A remote implementation of the Graffiti API",
   "types": "./dist/src/index.d.ts",
   "module": "./dist/esm/index.js",
@@ -58,10 +58,10 @@
   "license": "GPL-3.0-or-later",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/graffiti-garden/implementation-federated.git"
+    "url": "git+https://github.com/graffiti-garden/implementation-remote.git"
   },
   "bugs": {
-    "url": "https://github.com/graffiti-garden/implementation-federated/issues"
+    "url": "https://github.com/graffiti-garden/implementation-remote/issues"
   },
   "devDependencies": {
     "@graffiti-garden/implementation-remote-common": "file:../common",
