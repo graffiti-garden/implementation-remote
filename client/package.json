@@ -1,6 +1,6 @@
 {
   "name": "@graffiti-garden/implementation-remote",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A remote implementation of the Graffiti API",
   "types": "./dist/src/index.d.ts",
   "module": "./dist/esm/index.js",
@@ -50,9 +50,9 @@
     "test:coverage": "vitest --no-file-parallelism --coverage",
     "build:types": "tsc --declaration --emitDeclarationOnly",
     "build:js": "tsx esbuild.config.mts",
-    "build": "rm -rf dist && npm run build:types && npm run build:js",
-    "prepublishOnly": "npm update && npm test && npm run build",
-    "preinstall": "cd ../common && npm install && npm run build"
+    "build:common": "cd ../common && npm install && npm run build",
+    "build": "rm -rf dist && npm run build:common && npm run build:types && npm run build:js",
+    "prepublishOnly": "npm update && npm test && npm run build"
   },
   "author": "Theia Henderson",
   "license": "GPL-3.0-or-later",
