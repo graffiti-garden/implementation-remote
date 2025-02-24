@@ -6,6 +6,7 @@ services:
       - 443:443
     environment:
       DOMAIN: ${DOMAIN}
+      COUCHDB_DOMAIN: ${COUCHDB_DOMAIN}
       NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
     volumes:
       - ./server/config/nginx/nginx.conf:/etc/nginx/templates/nginx.conf.template

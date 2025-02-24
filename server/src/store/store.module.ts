@@ -14,7 +14,7 @@ if (process.env.USE_COUCHDB === "true") {
   console.log("Using external couchDB database...");
   const user = process.env.COUCHDB_USER;
   const password = process.env.COUCHDB_PASSWORD;
-  options.pouchDBOptions = {
+  options.pouchDBOptions =  {
     name: `http://${user}:${password}@couchdb:5984/graffiti`,
   };
 } else {
