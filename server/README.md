@@ -1,4 +1,4 @@
-# Graffiti Federated Implementation: Server
+# Graffiti Remote Implementation: Server
 
 This is a server for a remote implementation of the [Graffiti API](https://api.graffiti.garden/classes/Graffiti.html).
 The corresponding client is [adjacent in this repository](../client).
@@ -108,16 +108,16 @@ npm run test:watch store.controller
 
 Make sure the server has [Docker engine and compose](https://docs.docker.com/engine/install/#server) and [Certbot](https://certbot.eff.org/instructions) installed.
 
-Purchase a domain name if you don't already have one and add a DNS entry for your domain, where `DOMAIN` is replaced with your desired domain (for example `graffiti.example.com`), and `DOMAIN_IP` is the IP of the server:
+You will need two domains, one public domain for users to access the server
+and one private domain for you to administer the database.
+We will call these `DOMAIN` and `COUCHDB_DOMAIN` respectively.
+Use your domain registrar to set up two A records each pointing to your server's IP.
 
-```
-DOMAIN. 1800 IN A SERVER_IP
-```
-
-Once you can ping `DOMAIN` and get your server's IP (it can take up to an hour for DNS changes to propogate), run:
+Once you can ping `DOMAIN` and get your server's IP
+(it can take up to an hour for DNS changes to propogate), run:
 
 ```bash
-sudo certbot certonly --standalone -d DOMAIN
+sudo certbot certonly --standalone -d DOMAIN -d COUCHDB_DOMAIN
 ```
 
 Create a user-owned `/srv/docker` folder, `cd` into it and, clone this repository.
@@ -126,19 +126,32 @@ Create a user-owned `/srv/docker` folder, `cd` into it and, clone this repositor
 sudo mkdir /srv/docker
 sudo chown -R $(whoami):$(whoami) /srv/docker
 cd /srv/docker
-git clone https://github.com/graffiti-garden/graffiti-pod
+git clone https://github.com/graffiti-garden/implementation-remote
 ```
 
-In the root of the repository, create a `.env` file defining your domain.
+In the root of the repository, create a `.env` file defining both
+domains and the CouchDB credentials.
 
 ```bash
-echo "DOMAIN=graffiti.example.com" >> graffiti-pod/.env
+DOMAIN=pod.example.com
+COUCHDB_DOMAIN=db.example.com
+COUCHDB_USER=admin
+COUCHDB_PASSWORD=password
+```
+
+Make sure to change the password to something more secure. However
+currently special charachters won't work.
+If you need to clear and change the password (not that this will
+delete *all* your couchDB settings), run:
+
+```bash
+sudo docker volume rm implementation-remote_graffiti-couchdb-config
 ```
 
 Finally, link the service file into `systemd` and enable it.
 
 ```bash
-sudo ln -f graffiti-pod/config/system/graffiti-pod.service /etc/systemd/system/
+sudo ln -f server/config/system/graffiti-pod.service /etc/systemd/system/
 sudo systemctl enable --now graffiti-pod.service
 ```
 
