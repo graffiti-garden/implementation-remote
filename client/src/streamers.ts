@@ -1,5 +1,14 @@
 import { Graffiti, GraffitiErrorSchemaMismatch } from "@graffiti-garden/api";
-import type { GraffitiObjectBase, JSONSchema } from "@graffiti-garden/api";
+import type {
+  ChannelStats,
+  GraffitiObjectBase,
+  GraffitiObjectStreamContinue,
+  GraffitiObjectStreamContinueEntry,
+  GraffitiObjectStreamEntry,
+  GraffitiObjectStreamReturn,
+  GraffitiSession,
+  JSONSchema,
+} from "@graffiti-garden/api";
 import { GraffitiObjectJSONSchema } from "@graffiti-garden/api";
 import type Ajv from "ajv";
 import type { JSONSchemaType, ValidateFunction } from "ajv";
@@ -12,44 +21,100 @@ import { encodeQueryParams, graffitiUrlToHTTPUrl } from "./encode-request";
 import type { GraffitiSessionOIDC } from "./types";
 
 export const GRAFFITI_CHANNEL_STATS_SCHEMA: JSONSchemaType<{
-  channel: string;
-  count: number;
-  lastModified: number;
+  value: ChannelStats;
 }> = {
   type: "object",
+  required: ["value"],
   properties: {
-    channel: { type: "string" },
-    count: { type: "number" },
-    lastModified: { type: "number" },
+    value: {
+      type: "object",
+      properties: {
+        channel: { type: "string" },
+        count: { type: "number" },
+        lastModified: { type: "number" },
+      },
+      required: ["channel", "count", "lastModified"],
+    },
   },
-  required: ["channel", "count", "lastModified"],
+};
+
+export const GRAFFITI_OBJECT_STREAM_CONTINUE_ENTRY_SCHEMA: JSONSchemaType<
+  GraffitiObjectStreamContinueEntry<{}>
+> = {
+  type: "object",
+  required: ["object"],
+  oneOf: [
+    {
+      properties: {
+        object: GraffitiObjectJSONSchema,
+        tombstone: { type: "boolean", nullable: true },
+      },
+    },
+    {
+      required: ["tombstone"],
+      properties: {
+        tombstone: {
+          type: "boolean",
+          enum: [true],
+        },
+        object: {
+          type: "object",
+          required: ["url", "lastModified"],
+          properties: {
+            url: { type: "string" },
+            lastModified: { type: "number" },
+          },
+        },
+      },
+    },
+  ],
+};
+
+export const GRAFFITI_OBJECT_STREAM_RETURN_SCHEMA: JSONSchemaType<{
+  cursor: string;
+}> = {
+  type: "object",
+  required: ["cursor"],
+  properties: {
+    cursor: { type: "string" },
+  },
 };
 
 export class GraffitiRemoteStreamers {
   origin: string;
   httpOrigin: string;
-  validateGraffitiObject_:
-    | Promise<ValidateFunction<GraffitiObjectBase>>
+  validateObjectStreamEntry_:
+    | Promise<ValidateFunction<GraffitiObjectStreamEntry<{}>>>
+    | undefined;
+  validateObjectStreamContinueEntry_:
+    | Promise<ValidateFunction<GraffitiObjectStreamContinueEntry<{}>>>
+    | undefined;
+  validateObjectStreamReturn_:
+    | Promise<ValidateFunction<{ cursor: string }>>
     | undefined;
   validateChannelStats_:
-    | Promise<
-        ValidateFunction<{
-          channel: string;
-          count: number;
-          lastModified: number;
-        }>
-      >
+    | Promise<ValidateFunction<{ value: ChannelStats; error?: undefined }>>
     | undefined;
   useAjv: () => Promise<Ajv>;
 
-  get validateGraffitiObject() {
-    if (!this.validateGraffitiObject_) {
-      this.validateGraffitiObject_ = this.useAjv().then((ajv) =>
-        ajv.compile(GraffitiObjectJSONSchema),
+  get validateObjectStreamContinueEntry() {
+    if (!this.validateObjectStreamContinueEntry_) {
+      this.validateObjectStreamContinueEntry_ = this.useAjv().then((ajv) =>
+        ajv.compile(GRAFFITI_OBJECT_STREAM_CONTINUE_ENTRY_SCHEMA),
       );
     }
-    return this.validateGraffitiObject_;
+    return this.validateObjectStreamContinueEntry_;
   }
+
+  get validateObjectStreamReturn() {
+    if (!this.validateObjectStreamReturn_) {
+      this.validateObjectStreamReturn_ = this.useAjv().then((ajv) =>
+        ajv.compile(GRAFFITI_OBJECT_STREAM_RETURN_SCHEMA),
+      );
+    }
+    return this.validateObjectStreamReturn_;
+  }
+
   get validateChannelStats() {
     if (!this.validateChannelStats_) {
       this.validateChannelStats_ = this.useAjv().then((ajv) =>
@@ -74,38 +139,61 @@ export class GraffitiRemoteStreamers {
     const validate = compileGraffitiObjectSchema(await this.useAjv(), schema);
     const response = await (session?.fetch ?? fetch)(url);
 
-    const iterator = parseJSONLinesResponse(
+    const iterator = parseJSONLinesResponse<
+      GraffitiObjectStreamContinueEntry<Schema>,
+      GraffitiObjectStreamReturn<Schema>
+    >(
       response,
       this.httpOrigin,
-      async (object) => {
-        if (!(await this.validateGraffitiObject)(object)) {
+      async (entry): Promise<GraffitiObjectStreamContinueEntry<Schema>> => {
+        if (!(await this.validateObjectStreamContinueEntry)(entry)) {
           throw new Error("Source returned a non-Graffiti object");
         }
-        if (!object.url.startsWith(this.origin)) {
+        if (!entry.object.url.startsWith(this.origin)) {
           throw new Error(
-            "Source returned an object claiming to be from another source",
+            "Origin returned an object claiming to be from another origin",
           );
         }
+        if (entry.tombstone) {
+          return entry;
+        }
+        const object = entry.object;
         if (!isActorAllowedGraffitiObject(object, session)) {
           throw new Error(
-            "Source returned an object that the session is not allowed to see",
+            "Origin returned an object that the session is not allowed to see",
           );
         }
         isDesired(object);
         if (!validate(object)) {
           throw new GraffitiErrorSchemaMismatch();
         }
-        return object;
+        return { object };
+      },
+      async (returnValue) => {
+        if (!(await this.validateObjectStreamReturn)(returnValue)) {
+          throw new Error("Source returned a non-Graffiti object");
+        }
+        const cursor = returnValue.cursor;
+        // TODO: store meta data for the cursor locally to
+        // preserve typing.
+        return {
+          cursor,
+          continue: () =>
+            this.continueObjectStream(
+              cursor,
+              session,
+            ) as unknown as GraffitiObjectStreamContinue<Schema>,
+        };
       },
     );
 
-    try {
-      for await (const object of iterator) {
-        yield object;
+    while (true) {
+      const entry = await iterator.next();
+      if (entry.done) {
+        return entry.value;
+      } else {
+        yield entry.value;
       }
-    } finally {
-      // TODO: fix this
-      return { tombstoneRetention: 999999999 };
     }
   }
 
@@ -125,7 +213,24 @@ export class GraffitiRemoteStreamers {
         );
       }
     };
-    return this.streamObjects<Schema>(url, isDesired, schema, session);
+    const iterator = this.streamObjects<Schema>(
+      url,
+      isDesired,
+      schema,
+      session,
+    );
+
+    return (async function* () {
+      while (true) {
+        const entry = await iterator.next();
+        if (entry.done) {
+          return entry.value;
+        } else {
+          if (!entry.value.error && entry.value.tombstone) continue;
+          yield entry.value;
+        }
+      }
+    })();
   }
 
   recoverOrphans<Schema extends JSONSchema>(
@@ -143,7 +248,24 @@ export class GraffitiRemoteStreamers {
         throw new Error("Source returned an object with channels");
       }
     };
-    return this.streamObjects<Schema>(url, isDesired, schema, session);
+    const iterator = this.streamObjects<Schema>(
+      url,
+      isDesired,
+      schema,
+      session,
+    );
+
+    return (async function* () {
+      while (true) {
+        const entry = await iterator.next();
+        if (entry.done) {
+          return entry.value;
+        } else {
+          if (!entry.value.error && entry.value.tombstone) continue;
+          yield entry.value;
+        }
+      }
+    })();
   }
 
   channelStats(
@@ -158,6 +280,22 @@ export class GraffitiRemoteStreamers {
         }
         return object;
       },
+      (o) => {
+        if (o !== undefined) {
+          throw new Error("Unexpected return value from channel stats");
+        }
+        return o;
+      },
     );
+  }
+
+  continueObjectStream(
+    cursor: string,
+    session?: GraffitiSessionOIDC | null,
+  ): ReturnType<Graffiti["continueObjectStream"]> {
+    const url = encodeQueryParams(`${this.httpOrigin}/continue`, {
+      cursor,
+    });
+    return this.streamObjects<{}>(url, () => true, {}, session);
   }
 }

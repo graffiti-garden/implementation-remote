@@ -12,6 +12,7 @@ import {
   UnauthorizedException,
   Post,
   Param,
+  Query,
 } from "@nestjs/common";
 import { Controller } from "@nestjs/common";
 import { DecodeParam } from "../params/decodeparam.decorator";
@@ -126,14 +127,17 @@ export class StoreController {
     return this.storeService.iteratorToStreamableFile(iterator, response);
   }
 
-  @Get("continue/:cursor")
+  @Get("continue")
   @Header("Cache-Control", "private, no-cache")
   @Header("Vary", "Authorization")
   async continueObjectStream(
-    @Param("cursor") cursor: string,
+    @Query("cursor") cursor: string | null,
     @Actor() actor: string | null,
     @Response({ passthrough: true }) response: FastifyReply,
   ) {
+    if (!cursor) {
+      throw new UnprocessableEntityException("Cursor is required");
+    }
     let iterator: GraffitiObjectStreamContinue<{}>;
     try {
       iterator = this.graffiti.continueObjectStream(

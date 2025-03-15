@@ -5,12 +5,12 @@ import type {
   GraffitiPutObject,
   GraffitiPatch,
 } from "@graffiti-garden/api";
-import { GraffitiErrorSchemaMismatch } from "@graffiti-garden/api";
-import type { GraffitiSessionOIDC } from "./types";
 import {
-  compileGraffitiObjectSchema,
-  unpackLocationOrUri,
-} from "@graffiti-garden/implementation-local/utilities";
+  GraffitiErrorForbidden,
+  GraffitiErrorSchemaMismatch,
+} from "@graffiti-garden/api";
+import type { GraffitiSessionOIDC } from "./types";
+import { compileGraffitiObjectSchema } from "@graffiti-garden/implementation-local/utilities";
 import { parseGraffitiObjectResponse } from "./decode-response";
 import {
   encodeJSONBody,
@@ -41,11 +41,7 @@ export class GraffitiRemoteCrud
 
     const getUrl = encodeQueryParams(urlBase, { schema });
     const response = await (session?.fetch ?? fetch)(getUrl);
-    const object = await parseGraffitiObjectResponse(
-      response,
-      locationOrUri,
-      true,
-    );
+    const object = await parseGraffitiObjectResponse(response, locationOrUri);
     const validate = compileGraffitiObjectSchema(await this.useAjv(), schema);
     if (!validate(object)) {
       throw new GraffitiErrorSchemaMismatch(
@@ -59,6 +55,11 @@ export class GraffitiRemoteCrud
     object: GraffitiPutObject<Schema>,
     session: GraffitiSessionOIDC,
   ) {
+    if (object.actor && object.actor !== session.actor) {
+      throw new GraffitiErrorForbidden(
+        "The actor in the object does not match the session actor.",
+      );
+    }
     const url = object.url
       ? graffitiUrlToHTTPUrl(object.url)
       : this.httpOrigin + "/create";
