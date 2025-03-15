@@ -3,7 +3,7 @@ import {
   type GraffitiObjectUrl,
   type JSONSchema,
 } from "@graffiti-garden/api";
-import { unpackLocationOrUri } from "@graffiti-garden/implementation-local/utilities";
+import { unpackObjectUrl } from "@graffiti-garden/implementation-local/utilities";
 
 function addHeader(requestInit: RequestInit, key: string, value: string): void {
   if (!requestInit.headers || !(requestInit.headers instanceof Headers)) {
@@ -22,6 +22,7 @@ export function encodeQueryParams(
     channels?: string[];
     allowed?: string[] | null;
     schema?: JSONSchema;
+    cursor?: string;
   },
 ) {
   url += "?";
@@ -30,6 +31,9 @@ export function encodeQueryParams(
   }
   if (params.allowed) {
     url += "allowed=" + encodeStringArray(params.allowed) + "&";
+  }
+  if (params.cursor) {
+    url += "cursor=" + encodeURIComponent(params.cursor) + "&";
   }
   if (params.schema) {
     url += "schema=" + encodeURIComponent(JSON.stringify(params.schema)) + "&";
@@ -43,7 +47,7 @@ export function encodeJSONBody(requestInit: RequestInit, body: any): void {
 }
 
 export function graffitiUrlToHTTPUrl(urlObject: GraffitiObjectUrl | string) {
-  const url = unpackLocationOrUri(urlObject);
+  const url = unpackObjectUrl(urlObject);
   if (!url.startsWith("graffiti:remote:")) {
     throw new GraffitiErrorUnrecognizedUriScheme(
       "The provided URI does not use the 'graffiti:remote:' scheme.",
