@@ -21,6 +21,7 @@ export class GraffitiRemote extends Graffiti {
   discover: Graffiti["discover"];
   recoverOrphans: Graffiti["recoverOrphans"];
   channelStats: Graffiti["channelStats"];
+  continueObjectStream: Graffiti["continueObjectStream"];
   login: Graffiti["login"];
   logout: Graffiti["logout"];
   sessionEvents: Graffiti["sessionEvents"];
@@ -60,5 +61,6 @@ export class GraffitiRemote extends Graffiti {
     this.discover = graffitiRemoteAndLocal.discover;
     this.recoverOrphans = graffitiRemoteAndLocal.recoverOrphans;
     this.channelStats = graffitiRemoteAndLocal.channelStats;
+    this.continueObjectStream = graffitiRemoteAndLocal.continueObjectStream;
   }
 }
