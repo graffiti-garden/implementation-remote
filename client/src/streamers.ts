@@ -1,5 +1,6 @@
 import { Graffiti, GraffitiErrorSchemaMismatch } from "@graffiti-garden/api";
 import type { GraffitiObjectBase, JSONSchema } from "@graffiti-garden/api";
+import { GraffitiObjectJSONSchema } from "@graffiti-garden/api";
 import type Ajv from "ajv";
 import type { JSONSchemaType, ValidateFunction } from "ajv";
 import {
@@ -7,31 +8,8 @@ import {
   isActorAllowedGraffitiObject,
 } from "@graffiti-garden/implementation-local/utilities";
 import { parseJSONLinesResponse } from "./decode-response";
-import { encodeQueryParams } from "./encode-request";
+import { encodeQueryParams, graffitiUrlToHTTPUrl } from "./encode-request";
 import type { GraffitiSessionOIDC } from "./types";
-
-export const GRAFFITI_OBJECT_SCHEMA: JSONSchemaType<GraffitiObjectBase> = {
-  type: "object",
-  properties: {
-    actor: { type: "string" },
-    name: { type: "string" },
-    source: { type: "string" },
-    value: { type: "object" },
-    channels: { type: "array", items: { type: "string" } },
-    allowed: { type: "array", nullable: true, items: { type: "string" } },
-    tombstone: { type: "boolean" },
-    lastModified: { type: "number" },
-  },
-  required: [
-    "actor",
-    "name",
-    "source",
-    "channels",
-    "tombstone",
-    "lastModified",
-    "value",
-  ],
-};
 
 export const GRAFFITI_CHANNEL_STATS_SCHEMA: JSONSchemaType<{
   channel: string;
@@ -48,7 +26,8 @@ export const GRAFFITI_CHANNEL_STATS_SCHEMA: JSONSchemaType<{
 };
 
 export class GraffitiRemoteStreamers {
-  source: string;
+  origin: string;
+  httpOrigin: string;
   validateGraffitiObject_:
     | Promise<ValidateFunction<GraffitiObjectBase>>
     | undefined;
@@ -66,7 +45,7 @@ export class GraffitiRemoteStreamers {
   get validateGraffitiObject() {
     if (!this.validateGraffitiObject_) {
       this.validateGraffitiObject_ = this.useAjv().then((ajv) =>
-        ajv.compile(GRAFFITI_OBJECT_SCHEMA),
+        ajv.compile(GraffitiObjectJSONSchema),
       );
     }
     return this.validateGraffitiObject_;
@@ -80,8 +59,9 @@ export class GraffitiRemoteStreamers {
     return this.validateChannelStats_;
   }
 
-  constructor(source: string, useAjv: () => Promise<Ajv>) {
-    this.source = source;
+  constructor(origin: string, useAjv: () => Promise<Ajv>) {
+    this.origin = origin;
+    this.httpOrigin = graffitiUrlToHTTPUrl(origin);
     this.useAjv = useAjv;
   }
 
@@ -96,12 +76,12 @@ export class GraffitiRemoteStreamers {
 
     const iterator = parseJSONLinesResponse(
       response,
-      this.source,
+      this.httpOrigin,
       async (object) => {
         if (!(await this.validateGraffitiObject)(object)) {
           throw new Error("Source returned a non-Graffiti object");
         }
-        if (object.source !== this.source) {
+        if (!object.url.startsWith(this.origin)) {
           throw new Error(
             "Source returned an object claiming to be from another source",
           );
@@ -134,7 +114,7 @@ export class GraffitiRemoteStreamers {
     schema: Schema,
     session?: GraffitiSessionOIDC | null,
   ): ReturnType<typeof Graffiti.prototype.discover<Schema>> {
-    const url = encodeQueryParams(`${this.source}/discover`, {
+    const url = encodeQueryParams(`${this.httpOrigin}/discover`, {
       channels,
       schema,
     });
@@ -152,7 +132,7 @@ export class GraffitiRemoteStreamers {
     schema: Schema,
     session: GraffitiSessionOIDC,
   ): ReturnType<typeof Graffiti.prototype.discover<Schema>> {
-    const url = encodeQueryParams(`${this.source}/recover-orphans`, {
+    const url = encodeQueryParams(`${this.httpOrigin}/recover-orphans`, {
       schema,
     });
     const isDesired = (object: GraffitiObjectBase) => {
@@ -170,8 +150,8 @@ export class GraffitiRemoteStreamers {
     session: GraffitiSessionOIDC,
   ): ReturnType<Graffiti["channelStats"]> {
     return parseJSONLinesResponse(
-      session.fetch(`${this.source}/channel-stats`),
-      this.source,
+      session.fetch(`${this.httpOrigin}/channel-stats`),
+      this.origin,
       async (object) => {
         if (!(await this.validateChannelStats)(object)) {
           throw new Error("Source returned a non-channel-stats object");

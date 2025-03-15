@@ -4,10 +4,6 @@ import {
   type GraffitiLocalOptions,
 } from "@graffiti-garden/implementation-local/database";
 import {
-  locationToUri,
-  uriToLocation,
-} from "@graffiti-garden/implementation-local/utilities";
-import {
   type GraffitiSolidOIDCSessionManagerOptions,
   GraffitiSolidOIDCSessionManager,
 } from "@graffiti-garden/solid-oidc-session-manager";
@@ -18,9 +14,6 @@ import type { GraffitiRemoteOptions } from "./types";
 export type * from "./types";
 
 export class GraffitiRemote extends Graffiti {
-  locationToUri = locationToUri;
-  uriToLocation = uriToLocation;
-
   put: Graffiti["put"];
   get: Graffiti["get"];
   patch: Graffiti["patch"];
@@ -52,7 +45,7 @@ export class GraffitiRemote extends Graffiti {
     const graffitiLocal = new GraffitiLocalDatabase(options?.local);
     const graffitiRemote = new GraffitiRemoteDatabase(
       options?.remote ?? {
-        source: "https://pod.graffiti.garden",
+        origin: "graffiti:remote:pod.graffiti.garden",
       },
     );
     const graffitiRemoteAndLocal = new GraffitiRemoteAndLocal(

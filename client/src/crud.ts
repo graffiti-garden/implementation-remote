@@ -1,20 +1,22 @@
 import type {
   Graffiti,
   JSONSchema,
-  GraffitiLocation,
+  GraffitiObjectUrl,
   GraffitiPutObject,
   GraffitiPatch,
 } from "@graffiti-garden/api";
 import { GraffitiErrorSchemaMismatch } from "@graffiti-garden/api";
 import type { GraffitiSessionOIDC } from "./types";
 import {
-  unpackLocationOrUri,
   compileGraffitiObjectSchema,
-  randomBase64,
-  locationToUri,
+  unpackLocationOrUri,
 } from "@graffiti-garden/implementation-local/utilities";
 import { parseGraffitiObjectResponse } from "./decode-response";
-import { encodeJSONBody, encodeQueryParams } from "./encode-request";
+import {
+  encodeJSONBody,
+  encodeQueryParams,
+  graffitiUrlToHTTPUrl,
+} from "./encode-request";
 import type Ajv from "ajv";
 
 //@ts-ignore
@@ -22,21 +24,28 @@ export class GraffitiRemoteCrud
   implements Pick<Graffiti, "get" | "put" | "patch" | "delete">
 {
   useAjv: () => Promise<Ajv>;
-  source: string;
-  constructor(source: string, useAjv: () => Promise<Ajv>) {
-    this.source = source;
+  origin: string;
+  httpOrigin: string;
+  constructor(origin: string, useAjv: () => Promise<Ajv>) {
+    this.origin = origin;
+    this.httpOrigin = graffitiUrlToHTTPUrl(origin);
     this.useAjv = useAjv;
   }
 
   async get<Schema extends JSONSchema>(
-    locationOrUri: GraffitiLocation | string,
+    locationOrUri: GraffitiObjectUrl | string,
     schema: Schema,
     session?: GraffitiSessionOIDC,
   ) {
-    const { location, uri } = unpackLocationOrUri(locationOrUri);
-    const getUrl = encodeQueryParams(uri, { schema });
+    const urlBase = graffitiUrlToHTTPUrl(locationOrUri);
+
+    const getUrl = encodeQueryParams(urlBase, { schema });
     const response = await (session?.fetch ?? fetch)(getUrl);
-    const object = await parseGraffitiObjectResponse(response, location, true);
+    const object = await parseGraffitiObjectResponse(
+      response,
+      locationOrUri,
+      true,
+    );
     const validate = compileGraffitiObjectSchema(await this.useAjv(), schema);
     if (!validate(object)) {
       throw new GraffitiErrorSchemaMismatch(
@@ -50,46 +59,45 @@ export class GraffitiRemoteCrud
     object: GraffitiPutObject<Schema>,
     session: GraffitiSessionOIDC,
   ) {
-    const name = object.name ?? randomBase64();
-    const source = object.source ?? this.source;
-    const actor = object.actor ?? session.actor;
-    const location: GraffitiLocation = { name, source, actor };
-    const url = locationToUri(location);
+    const url = object.url
+      ? graffitiUrlToHTTPUrl(object.url)
+      : this.httpOrigin + "/create";
 
-    const requestInit: RequestInit = { method: "PUT" };
+    const requestInit: RequestInit = { method: object.url ? "PUT" : "POST" };
+
     encodeJSONBody(requestInit, object.value);
     const putUrl = encodeQueryParams(url, {
       channels: object.channels,
       allowed: object.allowed,
     });
     const response = await session.fetch(putUrl, requestInit);
-    return await parseGraffitiObjectResponse(response, location);
+    return await parseGraffitiObjectResponse(response, object.url);
   }
 
   async patch(
     patch: GraffitiPatch,
-    locationOrUri: GraffitiLocation | string,
+    locationOrUri: GraffitiObjectUrl | string,
     session: GraffitiSessionOIDC,
   ) {
-    const { location, uri } = unpackLocationOrUri(locationOrUri);
+    const url = graffitiUrlToHTTPUrl(locationOrUri);
     const requestInit: RequestInit = { method: "PATCH" };
     if (patch.value) {
       encodeJSONBody(requestInit, patch.value);
     }
-    const patchUrl = encodeQueryParams(uri, {
+    const patchUrl = encodeQueryParams(url, {
       channels: patch.channels?.map((p) => JSON.stringify(p)),
       allowed: patch.allowed?.map((p) => JSON.stringify(p)),
     });
     const response = await session.fetch(patchUrl, requestInit);
-    return await parseGraffitiObjectResponse(response, location);
+    return await parseGraffitiObjectResponse(response, locationOrUri);
   }
 
   async delete(
-    locationOrUri: GraffitiLocation | string,
+    locationOrUri: GraffitiObjectUrl | string,
     session: GraffitiSessionOIDC,
   ) {
-    const { location, uri } = unpackLocationOrUri(locationOrUri);
-    const response = await session.fetch(uri, { method: "DELETE" });
-    return await parseGraffitiObjectResponse(response, location);
+    const url = graffitiUrlToHTTPUrl(locationOrUri);
+    const response = await session.fetch(url, { method: "DELETE" });
+    return await parseGraffitiObjectResponse(response, locationOrUri);
   }
 }

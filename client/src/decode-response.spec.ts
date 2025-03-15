@@ -6,13 +6,11 @@ import {
   parseJSONLinesResponse,
 } from "./decode-response";
 import { randomBase64 } from "@graffiti-garden/implementation-local/utilities";
-import type { GraffitiLocation } from "@graffiti-garden/api";
+import type { GraffitiObjectUrl } from "@graffiti-garden/api";
 
-function randomLocation(): GraffitiLocation {
+function randomLocation(): GraffitiObjectUrl {
   return {
-    name: randomBase64(),
-    actor: randomBase64(),
-    source: randomBase64(),
+    url: randomBase64(),
   };
 }
 
@@ -88,10 +86,12 @@ it("parse put response", async () => {
     headers: {
       "Last-Modified": date.toUTCString(),
       "Last-Modified-Ms": date.getUTCMilliseconds().toString(),
+      Actor: "https://example.com",
     },
   });
   const location = randomLocation();
   const parsed = await parseGraffitiObjectResponse(response, location, false);
+  expect(parsed.actor).toBe("https://example.com");
   expect(parsed.tombstone).toBe(true);
   expect(parsed.value).toEqual({});
   expect(parsed.channels).toEqual([]);
@@ -112,12 +112,14 @@ it("parse empty allow", async () => {
         "Last-Modified": date.toUTCString(),
         "Last-Modified-Ms": date.getUTCMilliseconds().toString(),
         Allowed: "",
+        Actor: "hi",
       },
     },
   );
   const location = randomLocation();
   const parsed = await parseGraffitiObjectResponse(response, location, true);
   expect(parsed.tombstone).toBe(false);
+  expect(parsed.actor).toBe("hi");
   expect(parsed.value).toEqual({ hello: "world" });
   expect(parsed.channels).toEqual([]);
   expect(parsed.allowed).toEqual([]);
@@ -137,6 +139,7 @@ it("parse non-get response", async () => {
       "Last-Modified-Ms": lastModified.getUTCMilliseconds().toString(),
       Channels: channels.join(","),
       Allowed: allowed.join(","),
+      Actor: "asdf",
     },
   });
   const location = randomLocation();
@@ -144,6 +147,7 @@ it("parse non-get response", async () => {
   expect(parsed.tombstone).toBe(true);
   expect(parsed.value).toEqual(value);
   expect(parsed.channels).toEqual(channels);
+  expect(parsed.actor).toBe("asdf");
   expect(parsed.allowed).toEqual(allowed);
   expect(parsed.lastModified).toBe(lastModified.getTime());
   expect(parsed).toMatchObject(location);
@@ -161,6 +165,7 @@ it("parse get response", async () => {
       "Last-Modified-Ms": lastModified.getUTCMilliseconds().toString(),
       Channels: channels.join(","),
       Allowed: allowed.join(","),
+      actor: encodeURIComponent("https://🍄.🍄‍🟫"),
     },
   });
   const location = randomLocation();
@@ -169,6 +174,7 @@ it("parse get response", async () => {
   expect(parsed.value).toEqual(value);
   expect(parsed.channels).toEqual(channels);
   expect(parsed.allowed).toEqual(allowed);
+  expect(parsed.actor).toBe("https://🍄.🍄‍🟫");
   expect(parsed.lastModified).toBe(lastModified.getTime());
   expect(parsed).toMatchObject(location);
 });
@@ -197,6 +203,7 @@ it("parse response with extra fields in location", async () => {
     headers: {
       "Last-Modified": lastModified.toUTCString(),
       "Last-Modified-Ms": lastModified.getUTCMilliseconds().toString(),
+      Actor: "https://example.com",
     },
   });
   const location = {

@@ -1,5 +1,5 @@
 import type { GraffitiSession } from "@graffiti-garden/api";
-import type { GraffitiLocation } from "@graffiti-garden/api";
+import type { GraffitiObjectUrl } from "@graffiti-garden/api";
 import type { Graffiti } from "@graffiti-garden/api";
 import { unpackLocationOrUri } from "@graffiti-garden/implementation-local/utilities";
 
@@ -25,9 +25,9 @@ export class GraffitiRemoteAndLocal implements GraffitiBase {
   protected isRemoteSession(session?: GraffitiSession | null) {
     return session && session.actor.startsWith("http") && "fetch" in session;
   }
-  protected isRemoteLocation(locationOrUri: string | GraffitiLocation) {
-    const { location, uri } = unpackLocationOrUri(locationOrUri);
-    return location.source.startsWith("http");
+  protected isRemoteLocation(locationOrUri: string | GraffitiObjectUrl) {
+    const uri = unpackLocationOrUri(locationOrUri);
+    return uri.startsWith("graffiti:remote:");
   }
 
   get: Graffiti["get"] = async (...args) => {

@@ -2,7 +2,6 @@ import { describe } from "vitest";
 import {
   graffitiDiscoverTests,
   graffitiCRUDTests,
-  graffitiLocationTests,
   graffitiOrphanTests,
   graffitiChannelStatsTests,
 } from "@graffiti-garden/api/tests";
@@ -11,8 +10,8 @@ import secrets from "../../.secrets.json";
 import { solidNodeLogin } from "@graffiti-garden/implementation-remote-common";
 import { randomBase64 } from "@graffiti-garden/implementation-local/utilities";
 
-const source = "http://localhost:3000";
-const options = { remote: { source } };
+const origin = "graffiti:remote:http://localhost:3000";
+const options = { remote: { origin } };
 
 const session1 = solidNodeLogin(secrets);
 const session2 = solidNodeLogin(secrets, 1);
@@ -28,7 +27,6 @@ describe("Remote sessions", () => {
     () => session1,
     () => session2,
   );
-  graffitiLocationTests(() => new GraffitiRemote(options));
   graffitiOrphanTests(
     () => new GraffitiRemote(options),
     () => session1,

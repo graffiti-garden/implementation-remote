@@ -6,6 +6,6 @@ export interface GraffitiSessionOIDC extends GraffitiSession {
 }
 
 export interface GraffitiRemoteOptions {
-  source: string;
+  origin: string;
   ajv?: Ajv;
 }

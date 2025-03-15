@@ -1,6 +1,6 @@
 import type {
   GraffitiStream,
-  GraffitiLocation,
+  GraffitiObjectUrl,
   GraffitiObjectBase,
 } from "@graffiti-garden/api";
 import {
@@ -60,7 +60,7 @@ export function parseEncodedStringArrayHeader<T>(
 
 export async function parseGraffitiObjectResponse(
   response: Response,
-  location: GraffitiLocation,
+  locationOrUri: GraffitiObjectUrl | string | undefined,
   isGet: boolean = false,
 ): Promise<GraffitiObjectBase> {
   await catchResponseErrors(response);
@@ -94,10 +94,28 @@ export async function parseGraffitiObjectResponse(
     );
   }
 
+  const actorEncoded = response.headers.get("actor");
+  if (!actorEncoded) {
+    throw new Error("Received response from server without Actor header");
+  }
+  const actor = decodeURIComponent(actorEncoded);
+
+  const locationHeader = response.headers.get("location");
+  const url =
+    typeof locationOrUri === "string"
+      ? locationOrUri
+      : typeof locationOrUri === "undefined"
+        ? locationHeader
+          ? decodeURIComponent(locationHeader)
+          : undefined
+        : locationOrUri.url;
+  if (!url) {
+    throw new Error("Received response from server without Location header");
+  }
+
   return {
-    actor: location.actor,
-    source: location.source,
-    name: location.name,
+    url,
+    actor,
     tombstone: !isGet || response.status === 410,
     value,
     channels: parseEncodedStringArrayHeader(
@@ -115,7 +133,7 @@ export async function parseGraffitiObjectResponse(
 async function parseJSONLine<T>(
   line: string,
   lineParser: (json: {}) => T | Promise<T>,
-  source: string,
+  origin: string,
 ): Promise<Awaited<ReturnType<GraffitiStream<T, void>["next"]>>["value"]> {
   try {
     const json = JSON.parse(line);
@@ -125,7 +143,7 @@ async function parseJSONLine<T>(
   } catch (e) {
     return {
       error: e instanceof Error ? e : new Error(),
-      source,
+      origin,
     };
   }
 }

@@ -44,9 +44,9 @@ export class GraffitiRemoteDatabase
 
   constructor(options: GraffitiRemoteOptions) {
     this.options = options;
-    this.crud = new GraffitiRemoteCrud(options.source, () => this.ajv);
+    this.crud = new GraffitiRemoteCrud(options.origin, () => this.ajv);
     this.streamers = new GraffitiRemoteStreamers(
-      options.source,
+      options.origin,
       () => this.ajv,
     );
 

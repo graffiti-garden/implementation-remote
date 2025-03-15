@@ -8,28 +8,28 @@ import { GraffitiRemoteDatabase } from "./database";
 import secrets from "../../.secrets.json";
 import { solidNodeLogin } from "@graffiti-garden/implementation-remote-common";
 
-const source = "http://localhost:3000";
+const origin = "graffiti:remote:http://localhost:3000";
 
 const session1 = solidNodeLogin(secrets);
 const session2 = solidNodeLogin(secrets, 1);
 
 graffitiDiscoverTests(
-  () => new GraffitiRemoteDatabase({ source }),
+  () => new GraffitiRemoteDatabase({ origin }),
   () => session1,
   () => session2,
 );
 graffitiCRUDTests(
-  () => new GraffitiRemoteDatabase({ source }),
+  () => new GraffitiRemoteDatabase({ origin }),
   () => session1,
   () => session2,
 );
 graffitiOrphanTests(
-  () => new GraffitiRemoteDatabase({ source }),
+  () => new GraffitiRemoteDatabase({ origin }),
   () => session1,
   () => session2,
 );
 graffitiChannelStatsTests(
-  () => new GraffitiRemoteDatabase({ source }),
+  () => new GraffitiRemoteDatabase({ origin }),
   () => session1,
   () => session2,
 );
