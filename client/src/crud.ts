@@ -33,15 +33,15 @@ export class GraffitiRemoteCrud
   }
 
   async get<Schema extends JSONSchema>(
-    locationOrUri: GraffitiObjectUrl | string,
+    url: GraffitiObjectUrl | string,
     schema: Schema,
     session?: GraffitiSessionOIDC,
   ) {
-    const urlBase = graffitiUrlToHTTPUrl(locationOrUri);
+    const httpUrl = graffitiUrlToHTTPUrl(url);
 
-    const getUrl = encodeQueryParams(urlBase, { schema });
-    const response = await (session?.fetch ?? fetch)(getUrl);
-    const object = await parseGraffitiObjectResponse(response, locationOrUri);
+    const httpGetUrl = encodeQueryParams(httpUrl, { schema });
+    const response = await (session?.fetch ?? fetch)(httpGetUrl);
+    const object = await parseGraffitiObjectResponse(response, url);
     const validate = compileGraffitiObjectSchema(await this.useAjv(), schema);
     if (!validate(object)) {
       throw new GraffitiErrorSchemaMismatch(
@@ -60,14 +60,14 @@ export class GraffitiRemoteCrud
         "The actor in the object does not match the session actor.",
       );
     }
-    const url = object.url
+    const httpUrl = object.url
       ? graffitiUrlToHTTPUrl(object.url)
       : this.httpOrigin + "/create";
 
     const requestInit: RequestInit = { method: object.url ? "PUT" : "POST" };
 
     encodeJSONBody(requestInit, object.value);
-    const putUrl = encodeQueryParams(url, {
+    const putUrl = encodeQueryParams(httpUrl, {
       channels: object.channels,
       allowed: object.allowed,
     });
@@ -77,28 +77,25 @@ export class GraffitiRemoteCrud
 
   async patch(
     patch: GraffitiPatch,
-    locationOrUri: GraffitiObjectUrl | string,
+    url: GraffitiObjectUrl | string,
     session: GraffitiSessionOIDC,
   ) {
-    const url = graffitiUrlToHTTPUrl(locationOrUri);
+    const httpUrl = graffitiUrlToHTTPUrl(url);
     const requestInit: RequestInit = { method: "PATCH" };
     if (patch.value) {
       encodeJSONBody(requestInit, patch.value);
     }
-    const patchUrl = encodeQueryParams(url, {
+    const patchUrl = encodeQueryParams(httpUrl, {
       channels: patch.channels?.map((p) => JSON.stringify(p)),
       allowed: patch.allowed?.map((p) => JSON.stringify(p)),
     });
     const response = await session.fetch(patchUrl, requestInit);
-    return await parseGraffitiObjectResponse(response, locationOrUri);
+    return await parseGraffitiObjectResponse(response, url);
   }
 
-  async delete(
-    locationOrUri: GraffitiObjectUrl | string,
-    session: GraffitiSessionOIDC,
-  ) {
-    const url = graffitiUrlToHTTPUrl(locationOrUri);
-    const response = await session.fetch(url, { method: "DELETE" });
-    return await parseGraffitiObjectResponse(response, locationOrUri);
+  async delete(url: GraffitiObjectUrl | string, session: GraffitiSessionOIDC) {
+    const httpUrl = graffitiUrlToHTTPUrl(url);
+    const response = await session.fetch(httpUrl, { method: "DELETE" });
+    return await parseGraffitiObjectResponse(response, url);
   }
 }
