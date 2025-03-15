@@ -20,7 +20,9 @@ const headers = [
 ];
 
 async function bootstrap() {
-  const fastify = new FastifyAdapter();
+  const fastify = new FastifyAdapter({
+    bodyLimit: 8 * 1024 * 1024,
+  });
   fastify.enableCors({
     origin: "*",
     methods: ["GET", "POST", "PATCH", "DELETE", "PUT"],
