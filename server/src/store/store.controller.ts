@@ -23,6 +23,7 @@ import { StoreService } from "./store.service";
 import type {
   Graffiti,
   GraffitiObjectBase,
+  GraffitiObjectStream,
   GraffitiPatch,
 } from "@graffiti-garden/api";
 import {
@@ -64,9 +65,9 @@ export class StoreController {
     @Response({ passthrough: true }) response: FastifyReply,
     @Schema() schema: {},
   ) {
-    let iterator: ReturnType<Graffiti["discover"]>;
+    let iterator: GraffitiObjectStream<{}>;
     try {
-      iterator = this.graffiti.discover(
+      iterator = this.graffiti.discover<{}>(
         channels,
         schema,
         selfActor ? { actor: selfActor } : undefined,
@@ -113,9 +114,9 @@ export class StoreController {
         "You must be logged in to recover your orpaned objects",
       );
     }
-    let iterator: ReturnType<Graffiti["recoverOrphans"]>;
+    let iterator: GraffitiObjectStream<{}>;
     try {
-      iterator = this.graffiti.recoverOrphans(schema, { actor });
+      iterator = this.graffiti.recoverOrphans<{}>(schema, { actor });
     } catch (error) {
       throw this.storeService.catchGraffitiError(error);
     }

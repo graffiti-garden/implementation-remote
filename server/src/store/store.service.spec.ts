@@ -30,7 +30,6 @@ function randomGraffitiObject(): GraffitiObjectBase {
     url: randomString(),
     value: { [randomString()]: randomString() },
     lastModified: new Date().getTime(),
-    tombstone: false,
     channels: [],
   };
 }
@@ -104,13 +103,5 @@ describe("StoreService", () => {
     const response = responseMock();
     service.returnObject(go, response, "create");
     expect(response.statusCode).toBe(201);
-  });
-
-  it("return deleted object", async () => {
-    const go = randomGraffitiObject();
-    go.tombstone = true;
-    const response = responseMock();
-    service.returnObject(go, response, "get");
-    expect(response.statusCode).toBe(410);
   });
 });

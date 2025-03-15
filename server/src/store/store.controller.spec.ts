@@ -301,15 +301,13 @@ describe("StoreController", () => {
     expect(await responseDelete.json()).toEqual(body);
 
     const responseGet = await fetch(url);
-    expect(responseGet.status).toBe(410);
-    const value = await responseGet.json();
-    expect(value).toEqual(body);
-    expect(responseGet.headers.get("last-modified")).toEqual(
-      responseDelete.headers.get("last-modified"),
-    );
-    expect(responseGet.headers.get("last-modified-ms")).toEqual(
-      responseDelete.headers.get("last-modified-ms"),
-    );
+    expect(responseGet.status).toBe(404);
+    // expect(responseGet.headers.get("last-modified")).toEqual(
+    //   responseDelete.headers.get("last-modified"),
+    // );
+    // expect(responseGet.headers.get("last-modified-ms")).toEqual(
+    //   responseDelete.headers.get("last-modified-ms"),
+    // );
   });
 
   it("discover empty", async () => {
@@ -318,7 +316,8 @@ describe("StoreController", () => {
     });
     expect(response.status).toBe(200);
     const output = await response.text();
-    expect(output.length).toBe(0);
+    const out = JSON.parse(output);
+    expect(out).toHaveProperty("cursor");
   });
 
   it("discover single", async () => {
@@ -332,11 +331,13 @@ describe("StoreController", () => {
       channels,
     });
     expect(response.status).toBe(200);
-    const output = await response.json();
-    expect(output.value).toEqual(value);
-    expect(output.channels.sort()).toEqual(channels.sort());
-    expect(output.allowed).toBeUndefined();
-    expect(output.tombstone).toBe(false);
+    const output = await response.text();
+    const parts = output.split("\n").map((p) => JSON.parse(p));
+    expect(parts.length).toBe(2);
+    expect(parts[0].object.value).toEqual(value);
+    expect(parts[0].object.channels.sort()).toEqual(channels.sort());
+    expect(parts[0].object.allowed).toBeUndefined();
+    expect(parts[1]).toHaveProperty("cursor");
   });
 
   it("discover multiple", async () => {
@@ -371,11 +372,12 @@ describe("StoreController", () => {
     expect(response.status).toBe(200);
     const output = await response.text();
     const parts = output.split("\n");
-    expect(parts.length).toBe(2);
-    const objects = parts.map((p) => JSON.parse(p));
-    for (const obj of objects) {
+    expect(parts.length).toBe(3);
+    const values = parts.map((p) => JSON.parse(p));
+    for (const value of values.slice(0, 2)) {
+      expect(value.tombstone).toBeFalsy();
+      const obj = value.object;
       expect(obj.allowed).toBeUndefined();
-      expect(obj.tombstone).toBe(false);
       if (obj.url === uri1) {
         expect(obj.value).toEqual(value1);
         expect(obj.channels.sort()).toEqual(channels1.sort());
@@ -385,10 +387,10 @@ describe("StoreController", () => {
         expect(obj.channels.sort()).toEqual(channels2.sort());
         expect(obj.lastModified).toBe(putted2Date.getTime());
       } else {
-        console.log(obj.url);
         throw new Error("Unexpected object");
       }
     }
+    expect(values[2]).toHaveProperty("cursor");
   });
 
   it("discover with bad schema", async () => {
@@ -428,14 +430,16 @@ describe("StoreController", () => {
 
     expect(response.ok).toBe(true);
     const output = await response.text();
-    const parts = output.split("\n");
-    expect(parts.length).toBe(6);
+    const partsAll = output.split("\n").map((p) => JSON.parse(p));
+    expect(partsAll.length).toBe(7);
+    expect(partsAll[6]).toHaveProperty("cursor");
+    const parts = partsAll.slice(0, 6);
     let index = 3;
     const partsSortedByIndex = parts.sort(
-      (a, b) => JSON.parse(a).value.index - JSON.parse(b).value.index,
+      (a, b) => a.object.value.index - b.object.value.index,
     );
     for (const part of partsSortedByIndex) {
-      expect(JSON.parse(part).value.index).toBe(index);
+      expect(part.object.value.index).toBe(index);
       index++;
     }
   });

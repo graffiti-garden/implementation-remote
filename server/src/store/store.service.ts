@@ -18,8 +18,9 @@ import {
   GraffitiErrorPatchTestFailed,
   GraffitiErrorSchemaMismatch,
   GraffitiErrorUnauthorized,
+  GraffitiObjectStreamContinue,
+  GraffitiStreamError,
   type GraffitiObjectBase,
-  type GraffitiStream,
 } from "@graffiti-garden/api";
 
 export class StoreService {
@@ -66,8 +67,6 @@ export class StoreService {
     if (type === "create") {
       response.status(201);
       response.header("location", encodeURIComponent(object.url));
-    } else if (type === "get" && object.tombstone === true) {
-      response.status(410);
     } else {
       response.status(200);
     }
@@ -90,25 +89,30 @@ export class StoreService {
     return object.value;
   }
 
-  async iteratorToStreamableFile<T, S>(
-    iterator: GraffitiStream<T, S>,
+  async iteratorToStreamableFile<T extends { error?: undefined }, S>(
+    iterator: AsyncGenerator<GraffitiStreamError | T, S>,
     response: FastifyReply,
   ): Promise<StreamableFile> {
-    const firstResult = await iterator.next();
-    response.status(200);
-
     const byteIterator = (async function* () {
-      if (firstResult.done) return;
-      if (!firstResult.value.error) {
-        yield Buffer.from(JSON.stringify(firstResult.value.value));
-      }
-      for await (const object of iterator) {
-        if (object.error) continue;
+      while (true) {
+        const result = await iterator.next();
+        if (result.done) {
+          console.log("done!");
+          console.log(result.value);
+          yield JSON.stringify(result.value);
+          break;
+        }
+
+        if (result.value.error) {
+          continue;
+        }
+
+        yield JSON.stringify(result.value);
         yield Buffer.from("\n");
-        yield Buffer.from(JSON.stringify(object.value));
       }
     })();
     const stream = Readable.from(byteIterator);
+    response.status(200);
     return new StreamableFile(stream, {
       type: "text/plain",
     });
