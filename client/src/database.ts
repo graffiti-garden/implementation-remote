@@ -5,17 +5,7 @@ import { GraffitiRemoteStreamers } from "./streamers";
 import type { GraffitiRemoteOptions } from "./types";
 
 export class GraffitiRemoteDatabase
-  implements
-    Pick<
-      Graffiti,
-      | "put"
-      | "get"
-      | "patch"
-      | "delete"
-      | "discover"
-      | "recoverOrphans"
-      | "channelStats"
-    >
+  implements Omit<Graffiti, "login" | "logout" | "sessionEvents">
 {
   protected readonly crud: GraffitiRemoteCrud;
   protected readonly streamers: GraffitiRemoteStreamers;
@@ -29,6 +19,7 @@ export class GraffitiRemoteDatabase
   discover: Graffiti["discover"];
   recoverOrphans: Graffiti["recoverOrphans"];
   channelStats: Graffiti["channelStats"];
+  continueObjectStream: Graffiti["continueObjectStream"];
 
   get ajv() {
     if (!this.ajv_) {
@@ -57,5 +48,8 @@ export class GraffitiRemoteDatabase
     this.discover = this.streamers.discover.bind(this.streamers);
     this.recoverOrphans = this.streamers.recoverOrphans.bind(this.streamers);
     this.channelStats = this.streamers.channelStats.bind(this.streamers);
+    this.continueObjectStream = this.streamers.continueObjectStream.bind(
+      this.streamers,
+    );
   }
 }

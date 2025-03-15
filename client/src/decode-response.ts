@@ -177,7 +177,19 @@ export async function* parseJSONLinesResponse<
   let buffer = new Uint8Array();
   let lastLine: string | undefined;
   while (true) {
-    const { value, done } = await reader.read();
+    let value: Uint8Array<ArrayBufferLike> | undefined;
+    let done: boolean | undefined;
+    try {
+      const result = await reader.read();
+      value = result.value;
+      done = result.done;
+    } catch (e) {
+      yield {
+        error: e instanceof Error ? e : new Error(JSON.stringify(e)),
+        origin,
+      };
+      break;
+    }
 
     if (value) {
       const concatenated = new Uint8Array(buffer.length + value.length);
