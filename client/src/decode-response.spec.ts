@@ -90,9 +90,8 @@ it("parse put response", async () => {
     },
   });
   const location = randomLocation();
-  const parsed = await parseGraffitiObjectResponse(response, location, false);
+  const parsed = await parseGraffitiObjectResponse(response, location);
   expect(parsed.actor).toBe("https://example.com");
-  expect(parsed.tombstone).toBe(true);
   expect(parsed.value).toEqual({});
   expect(parsed.channels).toEqual([]);
   expect(parsed.allowed).toEqual(undefined);
@@ -117,8 +116,7 @@ it("parse empty allow", async () => {
     },
   );
   const location = randomLocation();
-  const parsed = await parseGraffitiObjectResponse(response, location, true);
-  expect(parsed.tombstone).toBe(false);
+  const parsed = await parseGraffitiObjectResponse(response, location);
   expect(parsed.actor).toBe("hi");
   expect(parsed.value).toEqual({ hello: "world" });
   expect(parsed.channels).toEqual([]);
@@ -143,8 +141,7 @@ it("parse non-get response", async () => {
     },
   });
   const location = randomLocation();
-  const parsed = await parseGraffitiObjectResponse(response, location, false);
-  expect(parsed.tombstone).toBe(true);
+  const parsed = await parseGraffitiObjectResponse(response, location);
   expect(parsed.value).toEqual(value);
   expect(parsed.channels).toEqual(channels);
   expect(parsed.actor).toBe("asdf");
@@ -169,8 +166,7 @@ it("parse get response", async () => {
     },
   });
   const location = randomLocation();
-  const parsed = await parseGraffitiObjectResponse(response, location, true);
-  expect(parsed.tombstone).toBe(false);
+  const parsed = await parseGraffitiObjectResponse(response, location);
   expect(parsed.value).toEqual(value);
   expect(parsed.channels).toEqual(channels);
   expect(parsed.allowed).toEqual(allowed);
@@ -212,8 +208,7 @@ it("parse response with extra fields in location", async () => {
     some: "extra fields",
   };
 
-  const parsed = await parseGraffitiObjectResponse(response, location, true);
-  expect(parsed.tombstone).toBe(false);
+  const parsed = await parseGraffitiObjectResponse(response, location);
   expect(parsed.value).toEqual(value);
   expect(parsed).not.toHaveProperty("some");
 });
@@ -236,36 +231,48 @@ it("parse response with error", async () => {
 });
 
 it("parse basic JSON lines", async () => {
-  const values = [{ value: "hello" }, { value: "world" }];
+  const values = [{ value: "hello" }, { value: "world" }, { the: "end" }];
   const response = new Response(
     values.map((v) => JSON.stringify(v)).join("\n"),
     {
       status: 200,
     },
   );
-  const parsed = parseJSONLinesResponse(response, "", (o) => o);
+  const parsed = parseJSONLinesResponse(
+    response,
+    "",
+    (o) => ({ ...o, error: undefined }),
+    (o) => o,
+  );
   const first = await parsed.next();
   assert(!first.done && !first.value.error);
-  expect(first.value.value).toEqual(values[0]);
+  expect(first.value).toEqual(values[0]);
   const second = await parsed.next();
   assert(!second.done && !second.value.error);
-  expect(second.value.value).toEqual(values[1]);
-  await expect(parsed.next()).resolves.toHaveProperty("done", true);
+  expect(second.value).toEqual(values[1]);
+  const third = await parsed.next();
+  assert(third.done);
+  expect(third.value).toEqual(values[2]);
 });
 
 it("parse erroneous JSON lines", async () => {
-  const values = ["{}", "{", "{}"];
+  const values = ["{}", "{", "{}", "]"];
   const response = new Response(values.join("\n"), {
     status: 200,
   });
-  const parsed = parseJSONLinesResponse(response, "", (o) => o);
+  const parsed = parseJSONLinesResponse(
+    response,
+    "",
+    (o) => ({ ...o, error: undefined }),
+    (o) => o,
+  );
   const first = await parsed.next();
   assert(!first.done && !first.value.error);
   const second = await parsed.next();
   assert(!second.done && second.value.error);
   const third = await parsed.next();
   assert(!third.done && !third.value.error);
-  await expect(parsed.next()).resolves.toHaveProperty("done", true);
+  await expect(parsed.next()).rejects.toThrow();
 });
 
 it("parse json list with newlines", async () => {
@@ -276,6 +283,9 @@ it("parse json list with newlines", async () => {
     {
       "another\nvalue": "wit\\h\\\n\n\n\\newlines",
     },
+    {
+      "last\n\none": "🐶🐣\n\n\\🐥",
+    },
   ];
   const response = new Response(
     values.map((v) => JSON.stringify(v)).join("\n"),
@@ -283,31 +293,47 @@ it("parse json list with newlines", async () => {
       status: 200,
     },
   );
-  const parsed = parseJSONLinesResponse(response, "", (o) => o);
+  const parsed = parseJSONLinesResponse(
+    response,
+    "",
+    (o) => ({ ...o, error: undefined }),
+    (o) => o,
+  );
   const first = await parsed.next();
   assert(!first.done && !first.value.error);
-  expect(first.value.value).toEqual(values[0]);
+  expect(first.value).toEqual(values[0]);
   const second = await parsed.next();
   assert(!second.done && !second.value.error);
-  expect(second.value.value).toEqual(values[1]);
-  await expect(parsed.next()).resolves.toHaveProperty("done", true);
+  expect(second.value).toEqual(values[1]);
+  const final = await parsed.next();
+  assert(final.done);
+  expect(final.value).toEqual(values[2]);
 });
 
 it("parse huuuge list", async () => {
   const values = Array.from({ length: 50000 }, (_, i) => ({ value: i }));
+  const valueString = values.map((v) => JSON.stringify(v)).join("\n");
   const response = new Response(
-    values.map((v) => JSON.stringify(v)).join("\n"),
+    // Add an empty return value at the end
+    valueString + "\n",
     {
       status: 200,
     },
   );
-  const parsed = parseJSONLinesResponse(response, "", (o) => o);
+  const parsed = parseJSONLinesResponse(
+    response,
+    "",
+    (o) => ({ ...o, error: undefined }),
+    (o) => o,
+  );
   for (const value of values) {
     const next = await parsed.next();
     assert(!next.done && !next.value.error);
-    expect(next.value.value).toEqual(value);
+    expect(next.value).toEqual(value);
   }
-  await expect(parsed.next()).resolves.toHaveProperty("done", true);
+  const returnVal = await parsed.next();
+  assert(returnVal.done);
+  expect(returnVal.value).toBeUndefined();
 });
 
 it("parse huuuge values", async () => {
@@ -315,16 +341,23 @@ it("parse huuuge values", async () => {
     value: i.toString().repeat(100000),
   }));
   const response = new Response(
-    values.map((v) => JSON.stringify(v)).join("\n"),
+    values.map((v) => JSON.stringify(v)).join("\n") + '\n"out"',
     {
       status: 200,
     },
   );
-  const parsed = parseJSONLinesResponse(response, "", (o) => o);
+  const parsed = parseJSONLinesResponse(
+    response,
+    "",
+    (o) => ({ ...o, error: undefined }),
+    (o) => o,
+  );
   for (const value of values) {
     const next = await parsed.next();
     assert(!next.done && !next.value.error);
-    expect(next.value.value).toEqual(value);
+    expect(next.value).toEqual(value);
   }
-  await expect(parsed.next()).resolves.toHaveProperty("done", true);
+  const returnVal = await parsed.next();
+  assert(returnVal.done);
+  expect(returnVal.value).toBe("out");
 });

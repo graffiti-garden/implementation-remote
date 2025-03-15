@@ -1,7 +1,8 @@
 import type {
-  GraffitiStream,
+  GraffitiObjectStream,
   GraffitiObjectUrl,
   GraffitiObjectBase,
+  GraffitiStreamError,
 } from "@graffiti-garden/api";
 import {
   GraffitiErrorForbidden,
@@ -61,7 +62,6 @@ export function parseEncodedStringArrayHeader<T>(
 export async function parseGraffitiObjectResponse(
   response: Response,
   locationOrUri: GraffitiObjectUrl | string | undefined,
-  isGet: boolean = false,
 ): Promise<GraffitiObjectBase> {
   await catchResponseErrors(response);
 
@@ -116,7 +116,6 @@ export async function parseGraffitiObjectResponse(
   return {
     url,
     actor,
-    tombstone: !isGet || response.status === 410,
     value,
     channels: parseEncodedStringArrayHeader(
       response.headers.get("channels"),
@@ -130,16 +129,14 @@ export async function parseGraffitiObjectResponse(
   };
 }
 
-async function parseJSONLine<T>(
+async function parseEntry<T extends { error?: undefined }>(
   line: string,
-  lineParser: (json: {}) => T | Promise<T>,
+  jsonToEntry: (json: {}) => T | Promise<T>,
   origin: string,
-): Promise<Awaited<ReturnType<GraffitiStream<T, void>["next"]>>["value"]> {
+): Promise<GraffitiStreamError | T> {
   try {
     const json = JSON.parse(line);
-    return {
-      value: await lineParser(json),
-    };
+    return await jsonToEntry(json);
   } catch (e) {
     return {
       error: e instanceof Error ? e : new Error(),
@@ -148,18 +145,27 @@ async function parseJSONLine<T>(
   }
 }
 
+async function parseReturn<S>(
+  line: string,
+  jsonToReturn: (json: {}) => S | Promise<S>,
+): Promise<S> {
+  const json = line.length ? JSON.parse(line) : undefined;
+  return await jsonToReturn(json);
+}
+
 const decoder = new TextDecoder();
 const newLineUint8 = "\n".charCodeAt(0);
-export async function* parseJSONLinesResponse<T>(
+export async function* parseJSONLinesResponse<
+  T extends { error?: undefined },
+  S,
+>(
   response_: Response | Promise<Response>,
-  source: string,
-  lineParser: (json: {}) => T | Promise<T>,
-): GraffitiStream<T, void> {
+  origin: string,
+  jsonToEntry: (json: {}) => T | Promise<T>,
+  jsonToReturn: (json: {}) => S | Promise<S>,
+): AsyncGenerator<GraffitiStreamError | T, S> {
   const response = await response_;
   await catchResponseErrors(response);
-  if (response.status === 204) {
-    return;
-  }
   if (response.status !== 200) {
     throw new Error(`Unexpected status code from server: ${response.status}`);
   }
@@ -169,6 +175,7 @@ export async function* parseJSONLinesResponse<T>(
   }
 
   let buffer = new Uint8Array();
+  let lastLine: string | undefined;
   while (true) {
     const { value, done } = await reader.read();
 
@@ -184,7 +191,10 @@ export async function* parseJSONLinesResponse<T>(
         if (end === -1) break;
         const lineBuffer = concatenated.slice(start, end);
         const line = decoder.decode(lineBuffer);
-        yield (await parseJSONLine(line, lineParser, source))!;
+        if (lastLine !== undefined) {
+          yield await parseEntry(lastLine, jsonToEntry, origin);
+        }
+        lastLine = line;
         start = end + 1;
       }
 
@@ -195,7 +205,14 @@ export async function* parseJSONLinesResponse<T>(
   }
 
   // Clear the buffer
-  if (buffer.length) {
-    yield (await parseJSONLine(decoder.decode(buffer), lineParser, source))!;
+  if (lastLine !== undefined) {
+    yield await parseEntry(lastLine, jsonToEntry, origin);
+  }
+  lastLine = decoder.decode(buffer);
+
+  if (lastLine !== undefined) {
+    return await parseReturn(lastLine, jsonToReturn);
+  } else {
+    throw new Error("Received empty response from server");
   }
 }
