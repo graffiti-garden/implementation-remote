@@ -7,14 +7,14 @@ import type { GraffitiLocalOptions } from "@graffiti-garden/implementation-local
 const options: GraffitiLocalOptions = {};
 const domain = process.env.DOMAIN;
 if (domain) {
-  options.sourceName = `https://${domain}`;
-  console.log("Setting pod source to be ", options.sourceName);
+  options.origin = `graffiti:remote:${domain}`;
+  console.log("Setting pod source to be ", options.origin);
 }
 if (process.env.USE_COUCHDB === "true") {
   console.log("Using external couchDB database...");
   const user = process.env.COUCHDB_USER;
   const password = process.env.COUCHDB_PASSWORD;
-  options.pouchDBOptions =  {
+  options.pouchDBOptions = {
     name: `http://${user}:${password}@couchdb:5984/graffiti`,
   };
 } else {

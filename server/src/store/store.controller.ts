@@ -10,6 +10,7 @@ import {
   Inject,
   Optional,
   UnauthorizedException,
+  Post,
 } from "@nestjs/common";
 import { Controller } from "@nestjs/common";
 import { DecodeParam } from "../params/decodeparam.decorator";
@@ -37,7 +38,7 @@ const CONTENT_TYPE = [
 @Controller()
 export class StoreController {
   readonly graffiti: GraffitiLocalDatabase;
-  readonly source: string;
+  readonly origin: string;
 
   constructor(
     private readonly storeService: StoreService,
@@ -45,10 +46,11 @@ export class StoreController {
     @Inject("GRAFFITI_POUCHDB_OPTIONS")
     private readonly options?: GraffitiLocalOptions,
   ) {
-    this.source = this.options?.sourceName ?? "http://localhost:3000";
+    this.origin =
+      this.options?.origin ?? "graffiti:remote:http://localhost:3000";
     options = {
       ...options,
-      sourceName: this.source,
+      origin: this.origin,
     };
     this.graffiti = new GraffitiLocalDatabase(options);
   }
@@ -121,18 +123,48 @@ export class StoreController {
     return this.storeService.iteratorToStreamableFile(iterator, response);
   }
 
-  @Put(":actor/:name")
+  @Post("create")
+  @Header(...CONTENT_TYPE)
+  async create(
+    @Body() value: unknown,
+    @Channels() channels: string[],
+    @Allowed() allowed: string[] | undefined,
+    @Actor() actor: string | null,
+    @Response({ passthrough: true }) response: FastifyReply,
+  ) {
+    this.storeService.requireActor(actor);
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      throw new UnprocessableEntityException("Body must be a JSON object");
+    }
+
+    let putted: GraffitiObjectBase;
+    try {
+      putted = await this.graffiti.put(
+        {
+          channels,
+          allowed,
+          value,
+        },
+        { actor },
+      );
+    } catch (error) {
+      throw this.storeService.catchGraffitiError(error);
+    }
+
+    return this.storeService.returnObject(putted, response, "create");
+  }
+
+  @Put(":name")
   @Header(...CONTENT_TYPE)
   async put(
-    @DecodeParam("actor") actor: string,
     @DecodeParam("name") name: string,
     @Body() value: unknown,
     @Channels() channels: string[],
     @Allowed() allowed: string[] | undefined,
-    @Actor() selfActor: string | null,
+    @Actor() actor: string | null,
     @Response({ passthrough: true }) response: FastifyReply,
   ) {
-    this.storeService.validateActor(actor, selfActor);
+    this.storeService.requireActor(actor);
     if (!value || typeof value !== "object" || Array.isArray(value)) {
       throw new UnprocessableEntityException("Body must be a JSON object");
     }
@@ -144,9 +176,8 @@ export class StoreController {
           actor,
           channels,
           allowed,
-          name,
-          source: this.source,
           value,
+          url: this.origin + "/" + name,
         },
         { actor },
       );
@@ -157,39 +188,34 @@ export class StoreController {
     return this.storeService.returnObject(putted, response, "put");
   }
 
-  @Delete(":actor/:name")
+  @Delete(":name")
   @Header(...CONTENT_TYPE)
   async delete(
-    @DecodeParam("actor") actor: string,
     @DecodeParam("name") name: string,
-    @Actor() selfActor: string | null,
+    @Actor() actor: string | null,
     @Response({ passthrough: true }) response: FastifyReply,
   ) {
-    this.storeService.validateActor(actor, selfActor);
+    this.storeService.requireActor(actor);
     let deleted: GraffitiObjectBase;
     try {
-      deleted = await this.graffiti.delete(
-        { actor, name, source: this.source },
-        { actor },
-      );
+      deleted = await this.graffiti.delete(this.origin + "/" + name, { actor });
     } catch (e) {
       throw this.storeService.catchGraffitiError(e);
     }
     return this.storeService.returnObject(deleted, response, "delete");
   }
 
-  @Patch(":actor/:name")
+  @Patch(":name")
   @Header(...CONTENT_TYPE)
   async patch(
-    @DecodeParam("actor") actor: string,
     @DecodeParam("name") name: string,
     @Body() valuePatch: unknown,
     @Channels() channelsPatchStringArray: string[],
     @Allowed() allowedPatchStringArray: string[] | undefined,
-    @Actor() selfActor: string | null,
+    @Actor() actor: string | null,
     @Response({ passthrough: true }) response: FastifyReply,
   ) {
-    this.storeService.validateActor(actor, selfActor);
+    this.storeService.requireActor(actor);
 
     const patches: GraffitiPatch = {};
     if (valuePatch) {
@@ -214,34 +240,31 @@ export class StoreController {
 
     let patched: GraffitiObjectBase;
     try {
-      patched = await this.graffiti.patch(
-        patches,
-        { actor, name, source: this.source },
-        { actor },
-      );
+      patched = await this.graffiti.patch(patches, this.origin + "/" + name, {
+        actor,
+      });
     } catch (e) {
       throw this.storeService.catchGraffitiError(e);
     }
     return this.storeService.returnObject(patched, response, "patch");
   }
 
-  @Get(":actor/:name")
+  @Get(":name")
   @Header(...CONTENT_TYPE)
   @Header("Cache-Control", "private, no-cache")
   @Header("Vary", "Authorization")
   async get(
-    @DecodeParam("actor") actor: string,
     @DecodeParam("name") name: string,
-    @Actor() selfActor: string | null,
+    @Actor() actor: string | null,
     @Schema() schema: {},
     @Response({ passthrough: true }) response: FastifyReply,
   ) {
     let gotten: GraffitiObjectBase;
     try {
       gotten = await this.graffiti.get(
-        { actor, name, source: this.source },
+        this.origin + "/" + name,
         schema,
-        selfActor ? { actor: selfActor } : undefined,
+        actor ? { actor } : undefined,
       );
     } catch (e) {
       throw this.storeService.catchGraffitiError(e);

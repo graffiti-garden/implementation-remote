@@ -3,7 +3,15 @@ import {
   type NestFastifyApplication,
   FastifyAdapter,
 } from "@nestjs/platform-fastify";
-import { describe, it, expect, beforeAll, beforeEach, afterEach } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  beforeEach,
+  afterEach,
+  assert,
+} from "vitest";
 import { randomBase64 as randomString } from "@graffiti-garden/implementation-local/utilities";
 import secrets from "../../../.secrets.json";
 import { solidNodeLogin } from "@graffiti-garden/implementation-remote-common";
@@ -14,12 +22,11 @@ import type { GraffitiPatch } from "@graffiti-garden/api";
 describe("StoreController", () => {
   let app: NestFastifyApplication;
   let solidFetch: typeof fetch;
-  let webId: string;
   const port = 3000;
   const baseUrl = `http://localhost:${port}`;
 
-  function toUrl(name: string, webId_: string = webId) {
-    return `${baseUrl}/${encodeURIComponent(webId_)}/${encodeURIComponent(name)}`;
+  function toUrl(name: string) {
+    return `${baseUrl}/${encodeURIComponent(name)}`;
   }
 
   async function request(
@@ -53,14 +60,33 @@ describe("StoreController", () => {
     return await fetch_(url, init);
   }
 
+  async function create(options: {
+    value: {};
+    channels?: string[];
+    allowed?: string[];
+  }) {
+    const { value, channels, allowed } = options;
+    const response = await request(solidFetch, toUrl("create"), "POST", {
+      allowed,
+      channels,
+      body: value,
+    });
+    expect(response.status).toBe(201);
+    const urlEncoded = response.headers.get("location");
+    assert(urlEncoded, "location not provided");
+    const graffitiUrl = decodeURIComponent(urlEncoded);
+    const out = {
+      graffitiUrl,
+      url: graffitiUrl.slice("graffiti:remote:".length),
+      response,
+    };
+    return out;
+  }
+
   beforeAll(async () => {
     // Login to solid
     const session = await solidNodeLogin(secrets);
     solidFetch = session.fetch;
-    if (!session.actor) {
-      throw new Error("No webId");
-    }
-    webId = session.actor;
   }, 100000);
 
   beforeEach(async () => {
@@ -79,8 +105,8 @@ describe("StoreController", () => {
   }, 100000);
 
   it("put with normal fetch", async () => {
-    const response = await fetch(toUrl(randomString()), {
-      method: "PUT",
+    const response = await fetch(toUrl("create"), {
+      method: "POST",
     });
     expect(response.status).toBe(401);
   });
@@ -91,16 +117,11 @@ describe("StoreController", () => {
   });
 
   it("put and get", async () => {
-    const url = toUrl(randomString());
     const body = { [randomString()]: randomString(), "🪿": "🐣" };
     const channels = [randomString(), "://,🎨", randomString()];
     const dateBefore = new Date().toUTCString();
-    const responsePut = await request(solidFetch, url, "PUT", {
-      body,
-      channels,
-    });
+    const { url } = await create({ value: body, channels });
     const dateAfter = new Date().toUTCString();
-    expect(responsePut.status).toBe(201);
 
     // Fetch authenticated
     const responseGetAuth = await solidFetch(url);
@@ -144,10 +165,9 @@ describe("StoreController", () => {
   });
 
   it("put and get unauthorized", async () => {
-    const url = toUrl(randomString());
     const allowed = [randomString()];
     const channels = [randomString()];
-    await request(solidFetch, url, "PUT", { allowed, channels, body: {} });
+    const { url } = await create({ value: {}, channels, allowed });
 
     const responseAuth = await solidFetch(url);
     expect(responseAuth.status).toBe(200);
@@ -162,8 +182,9 @@ describe("StoreController", () => {
   });
 
   it("put invalid body", async () => {
-    const url = toUrl(randomString());
-    const response = await request(solidFetch, url, "PUT", { body: [] });
+    const response = await request(solidFetch, toUrl("create"), "POST", {
+      body: [],
+    });
     expect(response.status).toBe(422);
   });
 
@@ -175,8 +196,11 @@ describe("StoreController", () => {
   });
 
   it("patch", async () => {
-    const url = toUrl(randomString());
-    await request(solidFetch, url, "PUT", { body: { before: "something" } });
+    const { url } = await create({
+      value: {
+        before: "something",
+      },
+    });
 
     const response = await request(solidFetch, url, "PATCH", {
       body: [
@@ -197,8 +221,11 @@ describe("StoreController", () => {
   });
 
   it("try to patch to invalid", async () => {
-    const url = toUrl(randomString());
-    await request(solidFetch, url, "PUT", { body: { hello: "world" } });
+    const { url } = await create({
+      value: {
+        hello: "world",
+      },
+    });
 
     const response = await request(solidFetch, url, "PATCH", {
       body: [
@@ -211,8 +238,11 @@ describe("StoreController", () => {
   });
 
   it("bad patch operation", async () => {
-    const url = toUrl(randomString());
-    await request(solidFetch, url, "PUT", { body: {} });
+    const { url } = await create({
+      value: {
+        hello: "world",
+      },
+    });
     const response = await request(solidFetch, url, "PATCH", {
       body: [{ op: "notarealop", path: "/hello" }],
     });
@@ -220,8 +250,9 @@ describe("StoreController", () => {
   });
 
   it("bad patch overall", async () => {
-    const url = toUrl(randomString());
-    await request(solidFetch, url, "PUT", { body: {} });
+    const { url } = await create({
+      value: {},
+    });
     const response = await request(solidFetch, url, "PATCH", {
       body: { notanarray: true },
     });
@@ -229,8 +260,9 @@ describe("StoreController", () => {
   });
 
   it("patch channels and acl", async () => {
-    const url = toUrl(randomString());
-    await request(solidFetch, url, "PUT", { body: {} });
+    const { url } = await create({
+      value: {},
+    });
     const response = await request(solidFetch, url, "PATCH", {
       allowed: [
         JSON.stringify({
@@ -261,8 +293,9 @@ describe("StoreController", () => {
 
   it("put, delete, get", async () => {
     const body = { [randomString()]: randomString() };
-    const url = toUrl(randomString());
-    await request(solidFetch, url, "PUT", { body });
+    const { url } = await create({
+      value: body,
+    });
     const responseDelete = await request(solidFetch, url, "DELETE");
     expect(responseDelete.status).toBe(200);
     expect(await responseDelete.json()).toEqual(body);
@@ -283,7 +316,7 @@ describe("StoreController", () => {
     const response = await request(solidFetch, baseUrl + "/discover", "GET", {
       channels: [],
     });
-    expect(response.status).toBe(204);
+    expect(response.status).toBe(200);
     const output = await response.text();
     expect(output.length).toBe(0);
   });
@@ -291,8 +324,10 @@ describe("StoreController", () => {
   it("discover single", async () => {
     const value = { [randomString()]: randomString() };
     const channels = [randomString(), randomString()];
-    const url = toUrl(randomString());
-    await request(solidFetch, url, "PUT", { body: value, channels });
+    await create({
+      value,
+      channels,
+    });
     const response = await request(solidFetch, baseUrl + "/discover", "GET", {
       channels,
     });
@@ -309,14 +344,12 @@ describe("StoreController", () => {
     const value2 = { [randomString()]: randomString() + "\n😏" };
     const channels1 = [randomString(), randomString()];
     const channels2 = [randomString(), channels1[0]];
-    const name1 = randomString();
-    const name2 = randomString();
-    const putted1 = await request(solidFetch, toUrl(name1), "PUT", {
-      body: value1,
+    const { graffitiUrl: uri1, response: putted1 } = await create({
+      value: value1,
       channels: channels1,
     });
-    const putted2 = await request(solidFetch, toUrl(name2), "PUT", {
-      body: value2,
+    const { graffitiUrl: uri2, response: putted2 } = await create({
+      value: value2,
       channels: channels2,
     });
 
@@ -343,15 +376,16 @@ describe("StoreController", () => {
     for (const obj of objects) {
       expect(obj.allowed).toBeUndefined();
       expect(obj.tombstone).toBe(false);
-      if (obj.name === name1) {
+      if (obj.url === uri1) {
         expect(obj.value).toEqual(value1);
         expect(obj.channels.sort()).toEqual(channels1.sort());
         expect(obj.lastModified).toBe(putted1Date.getTime());
-      } else if (obj.name === name2) {
+      } else if (obj.url === uri2) {
         expect(obj.value).toEqual(value2);
         expect(obj.channels.sort()).toEqual(channels2.sort());
         expect(obj.lastModified).toBe(putted2Date.getTime());
       } else {
+        console.log(obj.url);
         throw new Error("Unexpected object");
       }
     }
@@ -365,8 +399,8 @@ describe("StoreController", () => {
   it("discover with schema", async () => {
     const channels = [randomString(), randomString()];
     for (let i = 9; i >= 0; i--) {
-      await request(solidFetch, toUrl(randomString()), "PUT", {
-        body: { index: i },
+      await create({
+        value: { index: i },
         channels,
       });
     }

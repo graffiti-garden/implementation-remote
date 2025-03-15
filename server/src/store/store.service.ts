@@ -23,14 +23,11 @@ import {
 } from "@graffiti-garden/api";
 
 export class StoreService {
-  validateActor(targetActor: string | null, selfActor: string | null) {
-    if (!selfActor) {
+  requireActor(actor: string | null): asserts actor is string {
+    if (!actor) {
       throw new UnauthorizedException(
         "You must be logged in to access this resource.",
       );
-    }
-    if (targetActor !== selfActor) {
-      throw new ForbiddenException("You are not the owner of this resource.");
     }
   }
 
@@ -63,16 +60,12 @@ export class StoreService {
   returnObject(
     object: GraffitiObjectBase,
     response: FastifyReply,
-    type: "put" | "get" | "patch" | "delete",
+    type: "create" | "put" | "get" | "patch" | "delete",
   ): Object | void {
     // If putting and the previous object is blank issue "201: Created"
-    if (
-      type === "put" &&
-      Object.keys(object.value).length === 0 &&
-      object.channels.length === 0 &&
-      object.allowed === undefined
-    ) {
+    if (type === "create") {
       response.status(201);
+      response.header("location", encodeURIComponent(object.url));
     } else if (type === "get" && object.tombstone === true) {
       response.status(410);
     } else {
@@ -85,6 +78,7 @@ export class StoreService {
     if (object.channels.length) {
       response.header("channels", encodeURIArray(object.channels));
     }
+    response.header("actor", encodeURIComponent(object.actor));
     const lastModifiedDate = new Date(object.lastModified);
     response.header("last-modified", lastModifiedDate.toUTCString());
     // Send milliseconds too to avoid rounding errors
@@ -100,12 +94,8 @@ export class StoreService {
     iterator: GraffitiStream<T, S>,
     response: FastifyReply,
   ): Promise<StreamableFile> {
-    let firstResult = await iterator.next();
-    if (firstResult.done) {
-      response.status(204);
-    } else {
-      response.status(200);
-    }
+    const firstResult = await iterator.next();
+    response.status(200);
 
     const byteIterator = (async function* () {
       if (firstResult.done) return;

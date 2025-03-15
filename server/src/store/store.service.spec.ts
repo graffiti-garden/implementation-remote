@@ -27,10 +27,9 @@ function responseMock() {
 function randomGraffitiObject(): GraffitiObjectBase {
   return {
     actor: randomString(),
-    name: randomString(),
+    url: randomString(),
     value: { [randomString()]: randomString() },
     lastModified: new Date().getTime(),
-    source: randomString(),
     tombstone: false,
     channels: [],
   };
@@ -49,7 +48,7 @@ describe("StoreService", () => {
 
   it("unauthorized", async () => {
     try {
-      service.validateActor(randomString(), null);
+      service.requireActor(null);
     } catch (e: any) {
       expect(e).toBeInstanceOf(HttpException);
       expect(e.status).toBe(401);
@@ -57,19 +56,8 @@ describe("StoreService", () => {
     expect.assertions(2);
   });
 
-  it("forbidden", async () => {
-    try {
-      service.validateActor(randomString(), randomString());
-    } catch (e: any) {
-      expect(e).toBeInstanceOf(HttpException);
-      expect(e.status).toBe(403);
-    }
-    expect.assertions(2);
-  });
-
   it("authorized", async () => {
-    const webId = randomString();
-    expect(service.validateActor(webId, webId)).toBeUndefined();
+    service.requireActor(randomString());
   });
 
   it("return with channels and allowed", async () => {
@@ -114,7 +102,7 @@ describe("StoreService", () => {
     go.channels = [];
     go.allowed = undefined;
     const response = responseMock();
-    service.returnObject(go, response, "put");
+    service.returnObject(go, response, "create");
     expect(response.statusCode).toBe(201);
   });
 
