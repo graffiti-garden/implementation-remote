@@ -11,6 +11,7 @@ import {
   Optional,
   UnauthorizedException,
   Post,
+  Param,
 } from "@nestjs/common";
 import { Controller } from "@nestjs/common";
 import { DecodeParam } from "../params/decodeparam.decorator";
@@ -24,6 +25,7 @@ import type {
   Graffiti,
   GraffitiObjectBase,
   GraffitiObjectStream,
+  GraffitiObjectStreamContinue,
   GraffitiPatch,
 } from "@graffiti-garden/api";
 import {
@@ -60,7 +62,7 @@ export class StoreController {
   @Header("Cache-Control", "private, no-cache")
   @Header("Vary", "Authorization")
   async discover(
-    @Actor() selfActor: string | null,
+    @Actor() actor: string | null,
     @Channels() channels: string[],
     @Response({ passthrough: true }) response: FastifyReply,
     @Schema() schema: {},
@@ -70,7 +72,7 @@ export class StoreController {
       iterator = this.graffiti.discover<{}>(
         channels,
         schema,
-        selfActor ? { actor: selfActor } : undefined,
+        actor ? { actor } : undefined,
       );
     } catch (error) {
       throw this.storeService.catchGraffitiError(error);
@@ -117,6 +119,27 @@ export class StoreController {
     let iterator: GraffitiObjectStream<{}>;
     try {
       iterator = this.graffiti.recoverOrphans<{}>(schema, { actor });
+    } catch (error) {
+      throw this.storeService.catchGraffitiError(error);
+    }
+
+    return this.storeService.iteratorToStreamableFile(iterator, response);
+  }
+
+  @Get("continue/:cursor")
+  @Header("Cache-Control", "private, no-cache")
+  @Header("Vary", "Authorization")
+  async continueObjectStream(
+    @Param("cursor") cursor: string,
+    @Actor() actor: string | null,
+    @Response({ passthrough: true }) response: FastifyReply,
+  ) {
+    let iterator: GraffitiObjectStreamContinue<{}>;
+    try {
+      iterator = this.graffiti.continueObjectStream(
+        cursor,
+        actor ? { actor } : undefined,
+      );
     } catch (error) {
       throw this.storeService.catchGraffitiError(error);
     }

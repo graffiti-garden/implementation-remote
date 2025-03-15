@@ -97,8 +97,6 @@ export class StoreService {
       while (true) {
         const result = await iterator.next();
         if (result.done) {
-          console.log("done!");
-          console.log(result.value);
           yield JSON.stringify(result.value);
           break;
         }
