@@ -1,5 +1,5 @@
 import {
-  GraffitiErrorUnrecognizedUriScheme,
+  GraffitiErrorUnrecognizedUrlScheme,
   type GraffitiObjectUrl,
   type JSONSchema,
 } from "@graffiti-garden/api";
@@ -49,7 +49,7 @@ export function encodeJSONBody(requestInit: RequestInit, body: any): void {
 export function graffitiUrlToHTTPUrl(urlObject: GraffitiObjectUrl | string) {
   const url = unpackObjectUrl(urlObject);
   if (!url.startsWith("graffiti:remote:")) {
-    throw new GraffitiErrorUnrecognizedUriScheme(
+    throw new GraffitiErrorUnrecognizedUrlScheme(
       "The provided URI does not use the 'graffiti:remote:' scheme.",
     );
   }
