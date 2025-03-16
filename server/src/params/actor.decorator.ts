@@ -1,7 +1,9 @@
 import { createSolidTokenVerifier } from "@solid/access-token-verifier";
+import { WebIDIssuersCache } from "@solid/access-token-verifier/dist/class/WebIDIssuersCache";
 import type {
   RequestMethod,
   SolidAccessTokenPayload,
+  RetrieveOidcIssuersFunction,
 } from "@solid/access-token-verifier";
 import {
   createParamDecorator,
@@ -10,7 +12,36 @@ import {
 } from "@nestjs/common";
 import { IncomingMessage } from "http";
 
-const verify = createSolidTokenVerifier();
+class MyWebIdIssuersCache extends WebIDIssuersCache {
+  public constructor(private readonly cache = new WebIDIssuersCache()) {
+    super();
+  }
+  public async getIssuers(
+    webid: string,
+  ): ReturnType<RetrieveOidcIssuersFunction> {
+    try {
+      return await this.cache.getIssuers(webid);
+    } catch (e) {
+      if (
+        e instanceof Error &&
+        e.message.startsWith("The WebID could not be parsed") &&
+        webid.startsWith("https://id.inrupt.com")
+      ) {
+        return ["https://login.inrupt.com"];
+      } else {
+        throw new UnauthorizedException(
+          `Could not retrieve OIDC issuers for ${webid}`,
+        );
+      }
+    }
+  }
+}
+
+const verify = createSolidTokenVerifier(
+  undefined,
+  undefined,
+  new MyWebIdIssuersCache(),
+);
 
 export const Actor = createParamDecorator(
   async (_, ctx: ExecutionContext): Promise<string | null> => {
