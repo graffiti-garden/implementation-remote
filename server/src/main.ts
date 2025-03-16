@@ -15,8 +15,8 @@ const headers = [
   "Last-Modified-Ms",
   "Cache-Control",
   "Vary",
-  "A-IM",
-  "IM",
+  "Actor",
+  "Location"
 ];
 
 async function bootstrap() {
