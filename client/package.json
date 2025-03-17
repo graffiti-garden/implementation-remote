@@ -1,6 +1,6 @@
 {
   "name": "@graffiti-garden/implementation-remote",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "A remote implementation of the Graffiti API",
   "types": "./dist/src/index.d.ts",
   "module": "./dist/esm/index.js",
@@ -74,7 +74,7 @@
   "dependencies": {
     "@graffiti-garden/api": "^0.6.2",
     "@graffiti-garden/implementation-local": "^0.6.2",
-    "@graffiti-garden/solid-oidc-session-manager": "^0.1.4",
+    "@graffiti-garden/solid-oidc-session-manager": "^0.1.6",
     "ajv": "^8.17.1"
   }
 }
