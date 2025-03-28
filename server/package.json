@@ -14,8 +14,8 @@
     "preinstall": "cd ../common && npm install && npm run build"
   },
   "dependencies": {
-    "@graffiti-garden/api": "^0.6.1",
-    "@graffiti-garden/implementation-local": "^0.6.1",
+    "@graffiti-garden/api": "^0.6.3",
+    "@graffiti-garden/implementation-local": "^0.6.4",
     "@graffiti-garden/implementation-remote-common": "file:../common",
     "@nestjs/common": "^11.0.10",
     "@nestjs/core": "^11.0.10",
