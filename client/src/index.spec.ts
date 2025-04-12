@@ -10,8 +10,8 @@ import secrets from "../../.secrets.json";
 import { solidNodeLogin } from "@graffiti-garden/implementation-remote-common";
 import { randomBase64 } from "@graffiti-garden/implementation-local/utilities";
 
-const origin = "graffiti:remote:http://localhost:3000";
-const options = { remote: { origin } };
+const registry = ["graffiti:remote:http://localhost:3000"];
+const options = { remote: { registry } };
 
 const session1 = solidNodeLogin(secrets);
 const session2 = solidNodeLogin(secrets, 1);

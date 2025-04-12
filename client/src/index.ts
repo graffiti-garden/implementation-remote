@@ -7,7 +7,7 @@ import {
   type GraffitiSolidOIDCSessionManagerOptions,
   GraffitiSolidOIDCSessionManager,
 } from "@graffiti-garden/solid-oidc-session-manager";
-import { GraffitiRemoteDatabase } from "./database";
+import { GraffitiMultipleRemoteDatabases } from "./multiple-databases";
 import { GraffitiRemoteAndLocal } from "./remote-and-local";
 import type { GraffitiRemoteOptions } from "./types";
 
@@ -25,6 +25,8 @@ export class GraffitiRemote extends Graffiti {
   login: Graffiti["login"];
   logout: Graffiti["logout"];
   sessionEvents: Graffiti["sessionEvents"];
+
+  REGISTRY = ["graffiti:remote:pod.graffiti.garden"];
 
   /**
    * Create a new Graffiti client that can interact with a federated set of pods.
@@ -44,9 +46,9 @@ export class GraffitiRemote extends Graffiti {
     this.sessionEvents = sessionManager.sessionEvents;
 
     const graffitiLocal = new GraffitiLocalDatabase(options?.local);
-    const graffitiRemote = new GraffitiRemoteDatabase(
+    const graffitiRemote = new GraffitiMultipleRemoteDatabases(
       options?.remote ?? {
-        origin: "graffiti:remote:pod.graffiti.garden",
+        registry: this.REGISTRY,
       },
     );
     const graffitiRemoteAndLocal = new GraffitiRemoteAndLocal(

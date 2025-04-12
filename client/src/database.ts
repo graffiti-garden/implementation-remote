@@ -2,14 +2,13 @@ import type Ajv from "ajv";
 import type { Graffiti } from "@graffiti-garden/api";
 import { GraffitiRemoteCrud } from "./crud";
 import { GraffitiRemoteStreamers } from "./streamers";
-import type { GraffitiRemoteOptions } from "./types";
 
 export class GraffitiRemoteDatabase
   implements Omit<Graffiti, "login" | "logout" | "sessionEvents">
 {
   protected readonly crud: GraffitiRemoteCrud;
   protected readonly streamers: GraffitiRemoteStreamers;
-  protected readonly options: GraffitiRemoteOptions;
+  protected readonly options: { ajv?: Ajv; origin: string };
   protected ajv_: Promise<Ajv> | undefined;
 
   put: Graffiti["put"];
@@ -33,7 +32,7 @@ export class GraffitiRemoteDatabase
     return this.ajv_;
   }
 
-  constructor(options: GraffitiRemoteOptions) {
+  constructor(options: { ajv?: Ajv; origin: string }) {
     this.options = options;
     this.crud = new GraffitiRemoteCrud(options.origin, () => this.ajv);
     this.streamers = new GraffitiRemoteStreamers(
