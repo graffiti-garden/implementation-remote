@@ -1,10 +1,10 @@
-# Deprecated!
+# ⚠️ Deprecated!! ⚠️
 
-This repo has been deprecated in favor of:
-- [implementation-decentralized](https://github.com/graffiti-garden/implementation-decentralized): Client library for interacting with graffiti services.
-- [server](https://github.com/graffiti-garden/server): A reference graffiti server implementation.
+All Graffiti code has been merged into the [**Graffiti monorepo**](https://github.com/graffiti-garden/graffiti).
 
-What follows is kept for archival purposes.
+There you can find [the current decentralized implementation](https://github.com/graffiti-garden/graffiti/tree/main/implementations/decentralized) for the up to date descendant of this code.
+
+What follows is kept for **archival purposes**.
 
 # Graffiti Federated Pods Implementation
 
